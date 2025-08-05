@@ -93,18 +93,8 @@ function getAllCustomers($search = '', $limit = 20, $offset = 0) {
     return $customers;
 }
 
-function updateCustomerDebt($customer_id, $amount, $operation = 'add') {
-    $conn = getDBConnection();
-    
-    if ($operation === 'add') {
-        $stmt = $conn->prepare("UPDATE customers SET total_debt = total_debt + ? WHERE id = ?");
-    } else {
-        $stmt = $conn->prepare("UPDATE customers SET total_debt = GREATEST(0, total_debt - ?) WHERE id = ?");
-    }
-    
-    $stmt->bind_param("di", $amount, $customer_id);
-    return $stmt->execute();
-}
+// updateCustomerDebt function is defined later in the file (around line 244)
+// This duplicate declaration has been removed to prevent redeclaration error
 
 /**
  * Transaction Management Functions
