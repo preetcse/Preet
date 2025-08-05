@@ -210,6 +210,11 @@ def google_auth():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
+    # Check if credentials.json exists
+    if not os.path.exists(CLIENT_SECRETS_FILE):
+        flash('Google Drive credentials file (credentials.json) not found! Please set up Google Drive API first.', 'error')
+        return redirect(url_for('index'))
+    
     try:
         flow = Flow.from_client_secrets_file(
             CLIENT_SECRETS_FILE,
@@ -225,7 +230,7 @@ def google_auth():
         session['state'] = state
         return redirect(authorization_url)
     except Exception as e:
-        flash(f'Error setting up Google authentication: {e}', 'error')
+        flash(f'Error setting up Google authentication: {e}. Please check your credentials.json file.', 'error')
         return redirect(url_for('index'))
 
 @app.route('/google_callback')
@@ -233,11 +238,15 @@ def google_callback():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
+    if not os.path.exists(CLIENT_SECRETS_FILE):
+        flash('Google Drive credentials file not found!', 'error')
+        return redirect(url_for('index'))
+    
     try:
         flow = Flow.from_client_secrets_file(
             CLIENT_SECRETS_FILE,
             scopes=SCOPES,
-            state=session['state'],
+            state=session.get('state'),
             redirect_uri=url_for('google_callback', _external=True)
         )
         
