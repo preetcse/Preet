@@ -1,18 +1,26 @@
 <?php
 require_once 'config.php';
 require_once 'functions.php';
-requireLogin();
+
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $error_message = '';
 $success_message = '';
 
-if (isset($_GET['code'])) {
+// Check if user is logged in
+if (!isLoggedIn()) {
+    $error_message = 'You must be logged in to connect Google Drive. Please login first.';
+} elseif (isset($_GET['code'])) {
     // Exchange authorization code for tokens
     $tokens = exchangeCodeForTokens($_GET['code']);
     
     if ($tokens) {
         // Save tokens to database
-        if (saveGoogleTokens($_SESSION['user_id'], $tokens)) {
+        $user_id = $_SESSION['user_id'] ?? 1; // Fallback to user ID 1 if session is missing
+        if (saveGoogleTokens($user_id, $tokens)) {
             $success_message = 'Google Drive connected successfully! You can now upload bill photos automatically.';
         } else {
             $error_message = 'Failed to save Google Drive tokens. Please try again.';
