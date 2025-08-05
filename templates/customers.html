@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Customers - Amarjit Electrical Store{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-users text-primary"></i> Customers</h1>
+    <a href="{{ url_for('add_customer') }}" class="btn btn-primary">
+        <i class="fas fa-user-plus"></i> Add New Customer
+    </a>
+</div>
+
+<!-- Search Bar -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form method="GET" class="d-flex">
+            <input class="form-control me-2" type="search" name="search" placeholder="Search by name or phone..." 
+                   value="{{ search }}" aria-label="Search">
+            <button class="btn btn-outline-primary" type="submit">
+                <i class="fas fa-search"></i>
+            </button>
+            {% if search %}
+            <a href="{{ url_for('customers') }}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-times"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Customers List -->
+<div class="card">
+    <div class="card-body">
+        {% if customers.items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Address</th>
+                        <th>Outstanding Debt</th>
+                        <th>Member Since</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers.items %}
+                    <tr>
+                        <td>
+                            <strong>{{ customer.name }}</strong>
+                        </td>
+                        <td>{{ customer.phone }}</td>
+                        <td>{{ customer.address[:30] }}{% if customer.address|length > 30 %}...{% endif %}</td>
+                        <td>
+                            <span class="debt-amount {% if customer.total_debt > 0 %}debt-positive{% else %}debt-zero{% endif %}">
+                                ₹{{ "%.2f"|format(customer.total_debt) }}
+                            </span>
+                        </td>
+                        <td>{{ customer.created_date.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('customer_detail', id=customer.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <a href="{{ url_for('add_transaction', customer_id=customer.id) }}" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-plus"></i> Sale
+                                </a>
+                                <a href="{{ url_for('add_payment', customer_id=customer.id) }}" class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-money-bill"></i> Payment
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if customers.pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if customers.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('customers', page=customers.prev_num, search=search) }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in customers.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != customers.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('customers', page=page_num, search=search) }}">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if customers.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('customers', page=customers.next_num, search=search) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            {% if search %}
+            <h5 class="text-muted">No customers found matching "{{ search }}"</h5>
+            <p class="text-muted">Try a different search term or add a new customer.</p>
+            {% else %}
+            <h5 class="text-muted">No customers yet</h5>
+            <p class="text-muted">Start by adding your first customer to track their purchases and payments.</p>
+            {% endif %}
+            <a href="{{ url_for('add_customer') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Add First Customer
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
