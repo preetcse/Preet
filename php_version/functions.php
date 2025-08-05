@@ -77,6 +77,11 @@ function getCustomer($id) {
     return null;
 }
 
+function getCustomerById($id) {
+    // Alias for getCustomer for consistency
+    return getCustomer($id);
+}
+
 function getCustomerByPhone($phone) {
     $conn = getDBConnection();
     if (!$conn) return null;
@@ -235,10 +240,12 @@ function addTransaction($customer_id, $amount, $description, $bill_image_url = n
     $conn = getDBConnection();
     if (!$conn) return false;
     
-    $stmt = $conn->prepare("INSERT INTO transactions (customer_id, amount, description, bill_image_url, google_drive_file_id) VALUES (?, ?, ?, ?, ?)");
+    $transaction_date = date('Y-m-d H:i:s');
+    
+    $stmt = $conn->prepare("INSERT INTO transactions (customer_id, amount, description, transaction_date, bill_image_url, google_drive_file_id) VALUES (?, ?, ?, ?, ?, ?)");
     if (!$stmt) return false;
     
-    $stmt->bind_param("idsss", $customer_id, $amount, $description, $bill_image_url, $google_drive_file_id);
+    $stmt->bind_param("idssss", $customer_id, $amount, $description, $transaction_date, $bill_image_url, $google_drive_file_id);
     
     if ($stmt->execute()) {
         // Update customer's total debt
@@ -320,14 +327,41 @@ function getAllPayments($limit = 100) {
     return $payments;
 }
 
+function getRecentPayments($limit = 10) {
+    $conn = getDBConnection();
+    if (!$conn) return [];
+    
+    $stmt = $conn->prepare("
+        SELECT p.*, c.name as customer_name, c.phone as customer_phone 
+        FROM payments p 
+        LEFT JOIN customers c ON p.customer_id = c.id 
+        ORDER BY p.payment_date DESC 
+        LIMIT ?
+    ");
+    if (!$stmt) return [];
+    
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $payments = [];
+    while ($row = $result->fetch_assoc()) {
+        $payments[] = $row;
+    }
+    
+    return $payments;
+}
+
 function addPayment($customer_id, $amount, $notes = null) {
     $conn = getDBConnection();
     if (!$conn) return false;
     
-    $stmt = $conn->prepare("INSERT INTO payments (customer_id, amount, notes) VALUES (?, ?, ?)");
+    $payment_date = date('Y-m-d H:i:s');
+    
+    $stmt = $conn->prepare("INSERT INTO payments (customer_id, amount, payment_date, notes) VALUES (?, ?, ?, ?)");
     if (!$stmt) return false;
     
-    $stmt->bind_param("ids", $customer_id, $amount, $notes);
+    $stmt->bind_param("idss", $customer_id, $amount, $payment_date, $notes);
     
     if ($stmt->execute()) {
         // Update customer's total debt
@@ -344,17 +378,50 @@ function addPayment($customer_id, $amount, $notes = null) {
 
 function getDashboardStats() {
     $conn = getDBConnection();
-    if (!$conn) return ['total_customers' => 0, 'total_debt' => 0, 'monthly_transactions' => 0, 'monthly_payments' => 0];
+    if (!$conn) return [
+        'total_customers' => 0, 'total_debt' => 0, 'monthly_transactions' => 0, 'monthly_payments' => 0,
+        'total_transactions' => 0, 'total_payments' => 0, 'total_outstanding' => 0, 'total_sales' => 0,
+        'total_received' => 0, 'customers_with_debt' => 0, 'customers_cleared' => 0
+    ];
     
     // Total customers
     $result = $conn->query("SELECT COUNT(*) as count FROM customers");
     $total_customers = $result ? $result->fetch_assoc()['count'] : 0;
     
-    // Total debt
-    $result = $conn->query("SELECT SUM(total_debt) as total FROM customers");
+    // Total debt (outstanding)
+    $result = $conn->query("SELECT SUM(total_debt) as total FROM customers WHERE total_debt > 0");
     $total_debt = $result ? ($result->fetch_assoc()['total'] ?? 0) : 0;
     
-    // Total transactions this month
+    // All time transactions
+    $result = $conn->query("SELECT COUNT(*) as count, SUM(amount) as total FROM transactions");
+    if ($result) {
+        $trans_data = $result->fetch_assoc();
+        $total_transactions = $trans_data['count'] ?? 0;
+        $total_sales = $trans_data['total'] ?? 0;
+    } else {
+        $total_transactions = 0;
+        $total_sales = 0;
+    }
+    
+    // All time payments
+    $result = $conn->query("SELECT COUNT(*) as count, SUM(amount) as total FROM payments");
+    if ($result) {
+        $payment_data = $result->fetch_assoc();
+        $total_payments = $payment_data['count'] ?? 0;
+        $total_received = $payment_data['total'] ?? 0;
+    } else {
+        $total_payments = 0;
+        $total_received = 0;
+    }
+    
+    // Customers with debt vs cleared
+    $result = $conn->query("SELECT COUNT(*) as count FROM customers WHERE total_debt > 0");
+    $customers_with_debt = $result ? $result->fetch_assoc()['count'] : 0;
+    
+    $result = $conn->query("SELECT COUNT(*) as count FROM customers WHERE total_debt = 0");
+    $customers_cleared = $result ? $result->fetch_assoc()['count'] : 0;
+    
+    // Monthly transactions
     $current_month = date('Y-m');
     $stmt = $conn->prepare("SELECT COUNT(*) as count FROM transactions WHERE DATE_FORMAT(transaction_date, '%Y-%m') = ?");
     if ($stmt) {
@@ -365,7 +432,7 @@ function getDashboardStats() {
         $monthly_transactions = 0;
     }
     
-    // Total payments this month
+    // Monthly payments
     $stmt = $conn->prepare("SELECT SUM(amount) as total FROM payments WHERE DATE_FORMAT(payment_date, '%Y-%m') = ?");
     if ($stmt) {
         $stmt->bind_param("s", $current_month);
@@ -379,7 +446,14 @@ function getDashboardStats() {
         'total_customers' => $total_customers,
         'total_debt' => $total_debt,
         'monthly_transactions' => $monthly_transactions,
-        'monthly_payments' => $monthly_payments
+        'monthly_payments' => $monthly_payments,
+        'total_transactions' => $total_transactions,
+        'total_payments' => $total_payments,
+        'total_outstanding' => $total_debt, // Alias for total_debt
+        'total_sales' => $total_sales,
+        'total_received' => $total_received,
+        'customers_with_debt' => $customers_with_debt,
+        'customers_cleared' => $customers_cleared
     ];
 }
 
