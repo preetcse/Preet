@@ -86,6 +86,16 @@
             </div>
         </div>
         
+        <!-- Recent Bills Card -->
+        <div class="card mt-3" id="recentBills" style="display: none;">
+            <div class="card-header">
+                <h6><i class="fas fa-images"></i> Recent Bill Photos</h6>
+            </div>
+            <div class="card-body" id="billsContent">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+        
         <!-- Quick Help -->
         <div class="card">
             <div class="card-header">
@@ -188,13 +198,46 @@ function showCustomerFound(customer) {
             </span>
         </p>
         <p><strong>Customer Since:</strong> ${customer.created_date}</p>
+        <div class="row text-center">
+            <div class="col-4">
+                <small><strong>${customer.total_transactions}</strong><br>Purchases</small>
+            </div>
+            <div class="col-4">
+                <small><strong>${customer.total_payments}</strong><br>Payments</small>
+            </div>
+            <div class="col-4">
+                <small><strong>${customer.recent_bills.length}</strong><br>Bills</small>
+            </div>
+        </div>
         <hr>
-        <a href="/customer/${customer.id}" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-eye"></i> View Full Profile
+        <a href="/customer/${customer.id}" class="btn btn-sm btn-outline-primary w-100">
+            <i class="fas fa-eye"></i> View Complete History
         </a>
     `;
     document.getElementById('customerDetails').innerHTML = customerDetails;
     document.getElementById('customerInfo').style.display = 'block';
+    
+    // Show recent bill photos
+    if (customer.recent_bills && customer.recent_bills.length > 0) {
+        let billsHtml = '';
+        customer.recent_bills.forEach(bill => {
+            billsHtml += `
+                <div class="border-bottom pb-2 mb-2">
+                    <small>
+                        <strong>${bill.date}</strong> - ₹${bill.amount.toFixed(2)}<br>
+                        ${bill.description}<br>
+                        <a href="${bill.bill_url}" target="_blank" class="btn btn-xs btn-success">
+                            <i class="fas fa-image"></i> View Photo
+                        </a>
+                    </small>
+                </div>
+            `;
+        });
+        document.getElementById('billsContent').innerHTML = billsHtml;
+        document.getElementById('recentBills').style.display = 'block';
+    } else {
+        document.getElementById('recentBills').style.display = 'none';
+    }
 }
 
 function showCustomerNotFound(phone) {
@@ -209,6 +252,7 @@ function showCustomerNotFound(phone) {
     `;
     document.getElementById('searchResults').innerHTML = html;
     document.getElementById('customerInfo').style.display = 'none';
+    document.getElementById('recentBills').style.display = 'none';
 }
 
 function showActionForm() {
@@ -218,6 +262,8 @@ function showActionForm() {
 
 function hideActionForm() {
     document.getElementById('actionForm').style.display = 'none';
+    document.getElementById('customerInfo').style.display = 'none';
+    document.getElementById('recentBills').style.display = 'none';
     currentCustomer = null;
 }
 

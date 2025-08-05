@@ -446,6 +446,21 @@ def api_customer_search(phone):
     
     customer = Customer.query.filter_by(phone=phone).first()
     if customer:
+        # Get recent transactions with bill photos (last 5)
+        recent_bills = Transaction.query.filter_by(customer_id=customer.id)\
+            .filter(Transaction.bill_image_url.isnot(None))\
+            .order_by(Transaction.transaction_date.desc())\
+            .limit(5).all()
+        
+        bills_data = []
+        for transaction in recent_bills:
+            bills_data.append({
+                'date': transaction.transaction_date.strftime('%d/%m/%Y'),
+                'amount': transaction.amount,
+                'description': transaction.description or 'Purchase',
+                'bill_url': transaction.bill_image_url
+            })
+        
         return jsonify({
             'found': True,
             'id': customer.id,
@@ -453,7 +468,10 @@ def api_customer_search(phone):
             'phone': customer.phone,
             'address': customer.address,
             'total_debt': customer.total_debt,
-            'created_date': customer.created_date.strftime('%d/%m/%Y')
+            'created_date': customer.created_date.strftime('%d/%m/%Y'),
+            'recent_bills': bills_data,
+            'total_transactions': len(customer.transactions),
+            'total_payments': len(customer.payments)
         })
     else:
         return jsonify({'found': False})

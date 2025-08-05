@@ -57,12 +57,17 @@
         <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions" type="button" role="tab">
-                    <i class="fas fa-shopping-cart"></i> Transactions ({{ transactions|length }})
+                    <i class="fas fa-shopping-cart"></i> All Purchases ({{ transactions|length }})
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab">
-                    <i class="fas fa-money-bill-wave"></i> Payments ({{ payments|length }})
+                    <i class="fas fa-money-bill-wave"></i> All Payments ({{ payments|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="bills-tab" data-bs-toggle="tab" data-bs-target="#bills" type="button" role="tab">
+                    <i class="fas fa-images"></i> All Bill Photos ({{ transactions|selectattr('bill_image_url')|list|length }})
                 </button>
             </li>
         </ul>
@@ -98,14 +103,19 @@
                                         {% if transaction.transaction_type == 'purchase' %}+{% else %}-{% endif %}₹{{ "%.2f"|format(transaction.amount) }}
                                     </span>
                                 </td>
-                                <td>{{ transaction.description or 'No description' }}</td>
+                                <td>
+                                    <strong>{{ transaction.description or 'No description' }}</strong>
+                                    {% if transaction.bill_image_url %}
+                                    <br><small class="text-success"><i class="fas fa-camera"></i> Bill photo available</small>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if transaction.bill_image_url %}
-                                    <a href="{{ transaction.bill_image_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-image"></i> View Bill
+                                    <a href="{{ transaction.bill_image_url }}" target="_blank" class="btn btn-sm btn-success">
+                                        <i class="fas fa-image"></i> View Bill Photo
                                     </a>
                                     {% else %}
-                                    <span class="text-muted">No bill</span>
+                                    <span class="text-muted">No photo</span>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -163,6 +173,51 @@
                 </div>
                 {% endif %}
             </div>
+            
+            <!-- Bill Photos Tab -->
+            <div class="tab-pane fade" id="bills" role="tabpanel">
+                {% set bills_with_images = transactions|selectattr('bill_image_url')|list %}
+                {% if bills_with_images %}
+                <div class="row">
+                    {% for transaction in bills_with_images %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar"></i> {{ transaction.transaction_date.strftime('%d/%m/%Y') }}
+                                    <span class="badge bg-primary float-end">₹{{ "%.2f"|format(transaction.amount) }}</span>
+                                </h6>
+                            </div>
+                            <div class="card-body text-center">
+                                <p class="mb-2"><strong>{{ transaction.description or 'Purchase' }}</strong></p>
+                                <p class="text-muted small">{{ transaction.transaction_type.title() }} • ₹{{ "%.2f"|format(transaction.amount) }}</p>
+                                <a href="{{ transaction.bill_image_url }}" target="_blank" class="btn btn-success btn-sm">
+                                    <i class="fas fa-image"></i> View Bill Photo
+                                </a>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{ transaction.bill_image_url }}')">
+                                    <i class="fas fa-copy"></i> Copy Link
+                                </button>
+                            </div>
+                            <div class="card-footer">
+                                <small class="text-muted">
+                                    <i class="fas fa-cloud"></i> Stored in Google Drive
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Bill Photos Yet</h5>
+                    <p class="text-muted">When you upload bill photos during transactions, they will appear here organized by date.</p>
+                    <a href="{{ url_for('add_transaction', customer_id=customer.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Transaction with Photo
+                    </a>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -205,5 +260,50 @@
             </div>
         </div>
     </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">
+                    {{ transactions|selectattr('bill_image_url')|list|length }}
+                </h4>
+                <p class="mb-0">Bill Photos</p>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Show success message
+        const toast = document.createElement('div');
+        toast.className = 'position-fixed top-0 end-0 p-3';
+        toast.style.zIndex = '1050';
+        toast.innerHTML = `
+            <div class="toast show" role="alert">
+                <div class="toast-header">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <strong class="me-auto">Success</strong>
+                    <button type="button" class="btn-close" onclick="this.parentElement.parentElement.parentElement.remove()"></button>
+                </div>
+                <div class="toast-body">
+                    Bill photo link copied to clipboard!
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 3000);
+    }).catch(function(err) {
+        alert('Could not copy link: ' + err);
+    });
+}
+</script>
 {% endblock %}
