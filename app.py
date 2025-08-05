@@ -439,6 +439,73 @@ def api_customers():
         'total_debt': c.total_debt
     } for c in customers])
 
+@app.route('/api/customer/search/<phone>')
+def api_customer_search(phone):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    customer = Customer.query.filter_by(phone=phone).first()
+    if customer:
+        return jsonify({
+            'found': True,
+            'id': customer.id,
+            'name': customer.name,
+            'phone': customer.phone,
+            'address': customer.address,
+            'total_debt': customer.total_debt,
+            'created_date': customer.created_date.strftime('%d/%m/%Y')
+        })
+    else:
+        return jsonify({'found': False})
+
+@app.route('/quick_billing', methods=['GET', 'POST'])
+def quick_billing():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        phone = request.form['phone']
+        action = request.form['action']  # 'sale' or 'payment'
+        amount = float(request.form['amount'])
+        description = request.form.get('description', '')
+        
+        customer = Customer.query.filter_by(phone=phone).first()
+        if not customer:
+            flash('Customer not found! Please add customer first.', 'error')
+            return render_template('quick_billing.html')
+        
+        if action == 'sale':
+            # Record a sale/purchase
+            transaction = Transaction(
+                customer_id=customer.id,
+                amount=amount,
+                description=description,
+                transaction_date=datetime.now().date(),
+                transaction_type='purchase'
+            )
+            db.session.add(transaction)
+            customer.total_debt += amount
+            flash(f'Sale of ₹{amount:.2f} added for {customer.name}. New debt: ₹{customer.total_debt:.2f}', 'success')
+        
+        elif action == 'payment':
+            # Record a payment
+            payment = Payment(
+                customer_id=customer.id,
+                amount=amount,
+                payment_date=datetime.now().date(),
+                notes=description
+            )
+            db.session.add(payment)
+            customer.total_debt -= amount
+            if customer.total_debt < 0:
+                customer.total_debt = 0
+            flash(f'Payment of ₹{amount:.2f} recorded for {customer.name}. Remaining debt: ₹{customer.total_debt:.2f}', 'success')
+        
+        db.session.commit()
+        return render_template('quick_billing.html', customer=customer)
+    
+    return render_template('quick_billing.html')
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

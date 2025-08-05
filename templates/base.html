@@ -91,6 +91,9 @@
                         <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
                             <i class="fas fa-tachometer-alt me-2"></i> Dashboard
                         </a>
+                        <a class="nav-link {% if request.endpoint == 'quick_billing' %}active{% endif %}" href="{{ url_for('quick_billing') }}">
+                            <i class="fas fa-bolt me-2"></i> Quick Billing
+                        </a>
                         <a class="nav-link {% if request.endpoint == 'customers' %}active{% endif %}" href="{{ url_for('customers') }}">
                             <i class="fas fa-users me-2"></i> Customers
                         </a>
