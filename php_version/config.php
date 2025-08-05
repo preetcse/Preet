@@ -192,23 +192,8 @@ function authenticateUser($username, $password) {
     return false;
 }
 
-function createUser($username, $password) {
-    $conn = getDBConnection();
-    if (!$conn) return false;
-    
-    $password_hash = password_hash($password, PASSWORD_DEFAULT);
-    
-    $stmt = $conn->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
-    if (!$stmt) return false;
-    
-    $stmt->bind_param("ss", $username, $password_hash);
-    
-    if ($stmt->execute()) {
-        return $conn->insert_id;
-    }
-    
-    return false;
-}
+// createUser function is defined in functions.php (line 294)
+// This duplicate declaration has been removed to prevent redeclaration error
 
 function updateUserPassword($user_id, $new_password) {
     $conn = getDBConnection();

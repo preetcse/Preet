@@ -288,23 +288,8 @@ function getDashboardStats() {
  * User Authentication Functions
  */
 
-function authenticateUser($username, $password) {
-    $conn = getDBConnection();
-    
-    $stmt = $conn->prepare("SELECT id, password_hash FROM users WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows === 1) {
-        $user = $result->fetch_assoc();
-        if (password_verify($password, $user['password_hash'])) {
-            return $user['id'];
-        }
-    }
-    
-    return false;
-}
+// authenticateUser function is defined in config.php (line 175)
+// This duplicate declaration has been removed to prevent redeclaration error
 
 function createUser($username, $password) {
     $conn = getDBConnection();
@@ -320,7 +305,7 @@ function createUser($username, $password) {
     }
     
     // Hash password and create user
-    $password_hash = password_hash($password, PASSWORD_HASH_ALGO);
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
     $stmt = $conn->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
     $stmt->bind_param("ss", $username, $password_hash);
     
