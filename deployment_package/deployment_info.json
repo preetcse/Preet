@@ -1,0 +1,22 @@
+{
+  "app_name": "Amarjit Electrical Store",
+  "version": "1.0.0",
+  "deployment_date": "2024",
+  "files_included": [
+    "cloud_app.py",
+    "cloud_requirements.txt",
+    "Procfile",
+    "runtime.txt",
+    ".htaccess",
+    "index.cgi",
+    "templates/",
+    "static/"
+  ],
+  "environment_variables_needed": [
+    "SECRET_KEY",
+    "DATABASE_URL",
+    "GOOGLE_CREDENTIALS",
+    "FLASK_ENV"
+  ],
+  "domain": "Legendary-Preet.ct.ws"
+}

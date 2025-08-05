@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Add Payment - {{ customer.name }} - Amarjit Electrical Store{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('customers') }}">Customers</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('customer_detail', id=customer.id) }}">{{ customer.name }}</a></li>
+        <li class="breadcrumb-item active">Add Payment</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <h1><i class="fas fa-money-bill-wave text-primary"></i> Record Payment</h1>
+        <p class="text-muted">From customer: <strong>{{ customer.name }}</strong> ({{ customer.phone }})</p>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-money-bill"></i> Payment Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="amount" class="form-label">Payment Amount (₹) *</label>
+                            <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0.01" 
+                                   max="{{ customer.total_debt }}" required>
+                            <div class="form-text">
+                                Maximum payable: ₹{{ "%.2f"|format(customer.total_debt) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="payment_date" class="form-label">Payment Date *</label>
+                            <input type="date" class="form-control" id="payment_date" name="payment_date" 
+                                   value="{{ date.today() }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Any additional notes about this payment..."></textarea>
+                    </div>
+                    
+                    <!-- Payment Summary -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h6>Payment Summary:</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Current Debt:</strong><br>
+                                    <span class="debt-amount debt-positive">₹{{ "%.2f"|format(customer.total_debt) }}</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Payment Amount:</strong><br>
+                                    <span id="paymentAmount" class="text-success">₹0.00</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Remaining Debt:</strong><br>
+                                    <span id="remainingDebt" class="debt-amount debt-positive">₹{{ "%.2f"|format(customer.total_debt) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Record Payment
+                        </button>
+                        <a href="{{ url_for('customer_detail', id=customer.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-user"></i> Customer Info</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ customer.name }}</p>
+                <p><strong>Phone:</strong> {{ customer.phone }}</p>
+                <p><strong>Outstanding Debt:</strong> 
+                    <span class="debt-amount {% if customer.total_debt > 0 %}debt-positive{% else %}debt-zero{% endif %}">
+                        ₹{{ "%.2f"|format(customer.total_debt) }}
+                    </span>
+                </p>
+                {% if customer.address %}
+                <p><strong>Address:</strong> {{ customer.address }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6><i class="fas fa-history"></i> Recent Payments</h6>
+            </div>
+            <div class="card-body">
+                {% if customer.payments %}
+                    {% for payment in customer.payments[:3] %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <small>{{ payment.payment_date.strftime('%d/%m/%Y') }}</small>
+                        <small class="text-success">₹{{ "%.2f"|format(payment.amount) }}</small>
+                    </div>
+                    {% endfor %}
+                    {% if customer.payments|length > 3 %}
+                    <small class="text-muted">... and {{ customer.payments|length - 3 }} more</small>
+                    {% endif %}
+                {% else %}
+                <p class="text-muted small">No previous payments</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6><i class="fas fa-calculator"></i> Quick Amounts</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if customer.total_debt >= 1000 %}
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="setAmount(1000)">₹1,000</button>
+                    {% endif %}
+                    {% if customer.total_debt >= 500 %}
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="setAmount(500)">₹500</button>
+                    {% endif %}
+                    {% if customer.total_debt >= 100 %}
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="setAmount(100)">₹100</button>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setAmount({{ customer.total_debt }})">
+                        Full Amount (₹{{ "%.2f"|format(customer.total_debt) }})
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const currentDebt = {{ customer.total_debt }};
+
+function setAmount(amount) {
+    document.getElementById('amount').value = amount.toFixed(2);
+    updateSummary();
+}
+
+function updateSummary() {
+    const paymentInput = document.getElementById('amount');
+    const paymentAmount = parseFloat(paymentInput.value) || 0;
+    const remainingDebt = Math.max(0, currentDebt - paymentAmount);
+    
+    document.getElementById('paymentAmount').textContent = '₹' + paymentAmount.toFixed(2);
+    document.getElementById('remainingDebt').textContent = '₹' + remainingDebt.toFixed(2);
+    
+    const remainingElement = document.getElementById('remainingDebt');
+    remainingElement.className = remainingDebt > 0 ? 'debt-amount debt-positive' : 'debt-amount debt-zero';
+}
+
+// Auto-set today's date
+document.getElementById('payment_date').value = new Date().toISOString().split('T')[0];
+
+// Update summary when amount changes
+document.getElementById('amount').addEventListener('input', updateSummary);
+
+// Initial summary update
+updateSummary();
+</script>
+{% endblock %}

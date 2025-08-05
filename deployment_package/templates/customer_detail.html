@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.name }} - Amarjit Electrical Store{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('customers') }}">Customers</a></li>
+        <li class="breadcrumb-item active">{{ customer.name }}</li>
+    </ol>
+</nav>
+
+<!-- Customer Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h2><i class="fas fa-user text-primary"></i> {{ customer.name }}</h2>
+                        <p class="mb-1"><i class="fas fa-phone text-muted"></i> {{ customer.phone }}</p>
+                        <p class="mb-1"><i class="fas fa-map-marker-alt text-muted"></i> {{ customer.address or 'No address provided' }}</p>
+                        <p class="text-muted"><i class="fas fa-calendar text-muted"></i> Customer since {{ customer.created_date.strftime('%d %B %Y') }}</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <h3 class="debt-amount {% if customer.total_debt > 0 %}debt-positive{% else %}debt-zero{% endif %}">
+                            ₹{{ "%.2f"|format(customer.total_debt) }}
+                        </h3>
+                        <p class="text-muted">Outstanding Balance</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6>Quick Actions</h6>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('add_transaction', customer_id=customer.id) }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Record Sale
+                    </a>
+                    <a href="{{ url_for('add_payment', customer_id=customer.id) }}" class="btn btn-warning">
+                        <i class="fas fa-money-bill"></i> Record Payment
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transactions and Payments Tabs -->
+<div class="card">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions" type="button" role="tab">
+                    <i class="fas fa-shopping-cart"></i> All Purchases ({{ transactions|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab">
+                    <i class="fas fa-money-bill-wave"></i> All Payments ({{ payments|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="bills-tab" data-bs-toggle="tab" data-bs-target="#bills" type="button" role="tab">
+                    <i class="fas fa-images"></i> All Bill Photos ({{ transactions|selectattr('bill_image_url')|list|length }})
+                </button>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="card-body">
+        <div class="tab-content" id="myTabContent">
+            <!-- Transactions Tab -->
+            <div class="tab-pane fade show active" id="transactions" role="tabpanel">
+                {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Description</th>
+                                <th>Bill</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.transaction_date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge {% if transaction.transaction_type == 'purchase' %}bg-primary{% else %}bg-warning{% endif %}">
+                                        {{ transaction.transaction_type.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge {% if transaction.transaction_type == 'purchase' %}bg-danger{% else %}bg-success{% endif %}">
+                                        {% if transaction.transaction_type == 'purchase' %}+{% else %}-{% endif %}₹{{ "%.2f"|format(transaction.amount) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong>{{ transaction.description or 'No description' }}</strong>
+                                    {% if transaction.bill_image_url %}
+                                    <br><small class="text-success"><i class="fas fa-camera"></i> Bill photo available</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if transaction.bill_image_url %}
+                                    <a href="{{ transaction.bill_image_url }}" target="_blank" class="btn btn-sm btn-success">
+                                        <i class="fas fa-image"></i> View Bill Photo
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">No photo</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No transactions yet</h5>
+                    <p class="text-muted">Record the first sale or purchase for this customer.</p>
+                    <a href="{{ url_for('add_transaction', customer_id=customer.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add First Transaction
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Payments Tab -->
+            <div class="tab-pane fade" id="payments" role="tabpanel">
+                {% if payments %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Notes</th>
+                                <th>Recorded On</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.payment_date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge bg-success">₹{{ "%.2f"|format(payment.amount) }}</span>
+                                </td>
+                                <td>{{ payment.notes or 'No notes' }}</td>
+                                <td>{{ payment.created_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No payments yet</h5>
+                    <p class="text-muted">Record the first payment from this customer.</p>
+                    <a href="{{ url_for('add_payment', customer_id=customer.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add First Payment
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Bill Photos Tab -->
+            <div class="tab-pane fade" id="bills" role="tabpanel">
+                {% set bills_with_images = transactions|selectattr('bill_image_url')|list %}
+                {% if bills_with_images %}
+                <div class="row">
+                    {% for transaction in bills_with_images %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar"></i> {{ transaction.transaction_date.strftime('%d/%m/%Y') }}
+                                    <span class="badge bg-primary float-end">₹{{ "%.2f"|format(transaction.amount) }}</span>
+                                </h6>
+                            </div>
+                            <div class="card-body text-center">
+                                <p class="mb-2"><strong>{{ transaction.description or 'Purchase' }}</strong></p>
+                                <p class="text-muted small">{{ transaction.transaction_type.title() }} • ₹{{ "%.2f"|format(transaction.amount) }}</p>
+                                <a href="{{ transaction.bill_image_url }}" target="_blank" class="btn btn-success btn-sm">
+                                    <i class="fas fa-image"></i> View Bill Photo
+                                </a>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{ transaction.bill_image_url }}')">
+                                    <i class="fas fa-copy"></i> Copy Link
+                                </button>
+                            </div>
+                            <div class="card-footer">
+                                <small class="text-muted">
+                                    <i class="fas fa-cloud"></i> Stored in Google Drive
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Bill Photos Yet</h5>
+                    <p class="text-muted">When you upload bill photos during transactions, they will appear here organized by date.</p>
+                    <a href="{{ url_for('add_transaction', customer_id=customer.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Transaction with Photo
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-primary">{{ transactions|length }}</h4>
+                <p class="mb-0">Total Transactions</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-success">{{ payments|length }}</h4>
+                <p class="mb-0">Total Payments</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">
+                    ₹{{ "%.2f"|format(transactions|selectattr('transaction_type', 'equalto', 'purchase')|sum(attribute='amount') or 0) }}
+                </h4>
+                <p class="mb-0">Total Purchases</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-warning">
+                    ₹{{ "%.2f"|format(payments|sum(attribute='amount') or 0) }}
+                </h4>
+                <p class="mb-0">Total Paid</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">
+                    {{ transactions|selectattr('bill_image_url')|list|length }}
+                </h4>
+                <p class="mb-0">Bill Photos</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Show success message
+        const toast = document.createElement('div');
+        toast.className = 'position-fixed top-0 end-0 p-3';
+        toast.style.zIndex = '1050';
+        toast.innerHTML = `
+            <div class="toast show" role="alert">
+                <div class="toast-header">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <strong class="me-auto">Success</strong>
+                    <button type="button" class="btn-close" onclick="this.parentElement.parentElement.parentElement.remove()"></button>
+                </div>
+                <div class="toast-body">
+                    Bill photo link copied to clipboard!
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 3000);
+    }).catch(function(err) {
+        alert('Could not copy link: ' + err);
+    });
+}
+</script>
+{% endblock %}
