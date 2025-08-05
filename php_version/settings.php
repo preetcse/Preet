@@ -37,16 +37,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
                 
             case 'connect_google_drive':
-                $success_message = 'Google Drive integration is coming soon! This feature will allow automatic backup of all bill photos to your Google Drive account.';
+                $auth_url = getGoogleAuthUrl();
+                if ($auth_url) {
+                    header('Location: ' . $auth_url);
+                    exit;
+                } else {
+                    $error_message = 'Google Drive is not properly configured. Please check the settings.';
+                }
+                break;
+                
+            case 'disconnect_google_drive':
+                if (disconnectGoogleDrive($_SESSION['user_id'])) {
+                    $success_message = 'Google Drive disconnected successfully.';
+                } else {
+                    $error_message = 'Failed to disconnect Google Drive.';
+                }
                 break;
         }
     }
 }
 
-// Get current Google Drive status (placeholder for now)
-$google_drive_connected = false;
-$google_drive_status = 'Not Connected';
-$google_drive_info = '';
+// Get current Google Drive status
+$google_drive_connected = isGoogleDriveConnected($_SESSION['user_id']);
+$google_drive_status = $google_drive_connected ? 'Connected' : 'Not Connected';
+$google_drive_info = $google_drive_connected ? 'Bill photos will be automatically backed up to your Google Drive.' : 'Connect your Google Drive to enable automatic backup of bill photos.';
 ?>
 <!DOCTYPE html>
 <html lang="en">
