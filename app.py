@@ -12,6 +12,9 @@ from googleapiclient.http import MediaFileUpload
 import io
 import base64
 from PIL import Image
+import os
+# Fix for development - allow insecure transport for localhost
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this'
