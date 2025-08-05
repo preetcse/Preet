@@ -6,10 +6,21 @@
  */
 
 // Database configuration for InfinityFree
-define('DB_HOST', 'sql200.infinityfree.com'); // InfinityFree MySQL host
-define('DB_USER', 'if0_youruser'); // Your InfinityFree database username
-define('DB_PASS', 'your_password'); // Your InfinityFree database password
-define('DB_NAME', 'if0_youruser_electrical_store'); // Your database name
+// IMPORTANT: Replace these with your actual InfinityFree database details!
+// You can find these in your InfinityFree control panel under "MySQL Databases"
+
+define('DB_HOST', 'sql200.infinityfree.com'); // Your InfinityFree MySQL host (usually sqlXXX.infinityfree.com)
+define('DB_USER', 'if0_37114663'); // Your InfinityFree database username (format: if0_XXXXXXXX)
+define('DB_PASS', 'YourDatabasePassword'); // Your InfinityFree database password
+define('DB_NAME', 'if0_37114663_electrical_store'); // Your database name (format: if0_XXXXXXXX_electrical_store)
+
+// SETUP INSTRUCTIONS:
+// 1. Login to your InfinityFree control panel
+// 2. Go to "MySQL Databases" 
+// 3. Create a new database called "electrical_store" (it will become if0_XXXXXXXX_electrical_store)
+// 4. Note down the database host, username, password, and full database name
+// 5. Replace the values above with your actual credentials
+// 6. Upload this file to your website
 
 // Application settings
 define('APP_NAME', 'Amarjit Electrical Store');
@@ -17,8 +28,8 @@ define('APP_VERSION', '2.0.0');
 
 // Google Drive settings
 define('GOOGLE_DRIVE_ENABLED', true); // Set to true to enable Google Drive
-define('GOOGLE_CLIENT_ID', ''); // Your Google OAuth Client ID
-define('GOOGLE_CLIENT_SECRET', ''); // Your Google OAuth Client Secret
+define('GOOGLE_CLIENT_ID', ''); // Your Google OAuth Client ID (from Google Cloud Console)
+define('GOOGLE_CLIENT_SECRET', ''); // Your Google OAuth Client Secret (from Google Cloud Console)
 define('GOOGLE_REDIRECT_URI', 'https://legendary-preet.ct.ws/google_callback.php'); // OAuth redirect URI
 define('GOOGLE_FOLDER_NAME', 'Amarjit Electrical Store Bills'); // Folder name in Google Drive
 
@@ -54,7 +65,15 @@ function getDBConnection() {
             $connection->set_charset("utf8mb4");
             
         } catch (Exception $e) {
-            die("Database connection error: " . $e->getMessage());
+            die("Database connection error: " . $e->getMessage() . "<br><br>
+            <strong>SETUP REQUIRED:</strong><br>
+            1. Login to your InfinityFree control panel<br>
+            2. Go to 'MySQL Databases'<br>
+            3. Create a database called 'electrical_store'<br>
+            4. Update the credentials in config.php with your actual database details<br>
+            5. Your database host is usually something like 'sql200.infinityfree.com'<br>
+            6. Your username format is 'if0_XXXXXXXX'<br>
+            7. Use the password you set when creating the database<br>");
         }
     }
     
