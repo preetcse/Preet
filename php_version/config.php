@@ -1,9 +1,13 @@
 <?php
 /**
- * Amarjit Electrical Store - Configuration File
- * PHP Version for InfinityFree Hosting
- * Supports MySQL database and Google Drive integration
+ * Configuration file for Amarjit Electrical Store Management System
+ * Replace the database credentials below with your actual InfinityFree details
  */
+
+// Prevent direct access
+if (!defined('CONFIG_LOADED')) {
+    define('CONFIG_LOADED', true);
+}
 
 // Database configuration for InfinityFree
 // IMPORTANT: Replace these with your actual InfinityFree database details!
@@ -14,20 +18,12 @@ define('DB_USER', 'if0_37114663'); // Your InfinityFree database username (forma
 define('DB_PASS', 'YourDatabasePassword'); // Your InfinityFree database password
 define('DB_NAME', 'if0_37114663_electrical_store'); // Your database name (format: if0_XXXXXXXX_electrical_store)
 
-// SETUP INSTRUCTIONS:
-// 1. Login to your InfinityFree control panel
-// 2. Go to "MySQL Databases" 
-// 3. Create a new database called "electrical_store" (it will become if0_XXXXXXXX_electrical_store)
-// 4. Note down the database host, username, password, and full database name
-// 5. Replace the values above with your actual credentials
-// 6. Upload this file to your website
-
 // Application settings
 define('APP_NAME', 'Amarjit Electrical Store');
 define('APP_VERSION', '2.0.0');
 
 // Google Drive settings
-define('GOOGLE_DRIVE_ENABLED', true); // Set to true to enable Google Drive
+define('GOOGLE_DRIVE_ENABLED', true);
 define('GOOGLE_CLIENT_ID', ''); // Your Google OAuth Client ID (from Google Cloud Console)
 define('GOOGLE_CLIENT_SECRET', ''); // Your Google OAuth Client Secret (from Google Cloud Console)
 define('GOOGLE_REDIRECT_URI', 'https://legendary-preet.ct.ws/google_callback.php'); // OAuth redirect URI
@@ -38,15 +34,17 @@ define('UPLOAD_DIR', 'uploads/'); // Local temporary upload directory
 define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5MB max file size
 
 // Session configuration
-ini_set('session.cookie_lifetime', 0);
-ini_set('session.cookie_secure', 0); // Set to 1 if using HTTPS
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_strict_mode', 1);
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_lifetime', 0);
+    ini_set('session.cookie_secure', 0); // Set to 1 if using HTTPS
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_strict_mode', 1);
+    session_start();
+}
 
 // Create uploads directory if it doesn't exist
 if (!file_exists(UPLOAD_DIR)) {
-    mkdir(UPLOAD_DIR, 0755, true);
+    @mkdir(UPLOAD_DIR, 0755, true);
 }
 
 // Database connection function
@@ -65,15 +63,9 @@ function getDBConnection() {
             $connection->set_charset("utf8mb4");
             
         } catch (Exception $e) {
-            die("Database connection error: " . $e->getMessage() . "<br><br>
-            <strong>SETUP REQUIRED:</strong><br>
-            1. Login to your InfinityFree control panel<br>
-            2. Go to 'MySQL Databases'<br>
-            3. Create a database called 'electrical_store'<br>
-            4. Update the credentials in config.php with your actual database details<br>
-            5. Your database host is usually something like 'sql200.infinityfree.com'<br>
-            6. Your username format is 'if0_XXXXXXXX'<br>
-            7. Use the password you set when creating the database<br>");
+            // Don't die immediately - let the application handle it gracefully
+            error_log("Database connection error: " . $e->getMessage());
+            return false;
         }
     }
     
@@ -84,84 +76,88 @@ function getDBConnection() {
 function initializeDatabase() {
     $conn = getDBConnection();
     
-    // Users table
-    $sql = "CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )";
-    
-    if (!$conn->query($sql)) {
-        throw new Exception("Error creating users table: " . $conn->error);
+    if (!$conn) {
+        return false;
     }
     
-    // Customers table
-    $sql = "CREATE TABLE IF NOT EXISTS customers (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        phone VARCHAR(20) UNIQUE NOT NULL,
-        address TEXT,
-        total_debt DECIMAL(10,2) DEFAULT 0.00,
-        created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )";
-    
-    if (!$conn->query($sql)) {
-        throw new Exception("Error creating customers table: " . $conn->error);
+    try {
+        // Users table
+        $sql = "CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )";
+        
+        if (!$conn->query($sql)) {
+            throw new Exception("Error creating users table: " . $conn->error);
+        }
+        
+        // Customers table
+        $sql = "CREATE TABLE IF NOT EXISTS customers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            phone VARCHAR(20) UNIQUE NOT NULL,
+            address TEXT,
+            total_debt DECIMAL(10,2) DEFAULT 0.00,
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )";
+        
+        if (!$conn->query($sql)) {
+            throw new Exception("Error creating customers table: " . $conn->error);
+        }
+        
+        // Transactions table
+        $sql = "CREATE TABLE IF NOT EXISTS transactions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            customer_id INT NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            description TEXT,
+            bill_image_url TEXT,
+            google_drive_file_id VARCHAR(255),
+            transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+        )";
+        
+        if (!$conn->query($sql)) {
+            throw new Exception("Error creating transactions table: " . $conn->error);
+        }
+        
+        // Payments table
+        $sql = "CREATE TABLE IF NOT EXISTS payments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            customer_id INT NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            notes TEXT,
+            payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+        )";
+        
+        if (!$conn->query($sql)) {
+            throw new Exception("Error creating payments table: " . $conn->error);
+        }
+        
+        // Google Drive tokens table
+        $sql = "CREATE TABLE IF NOT EXISTS google_drive_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            access_token TEXT NOT NULL,
+            refresh_token TEXT,
+            expires_at TIMESTAMP NULL,
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )";
+        
+        if (!$conn->query($sql)) {
+            throw new Exception("Error creating google_drive_tokens table: " . $conn->error);
+        }
+        
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Database initialization error: " . $e->getMessage());
+        return false;
     }
-    
-    // Transactions table
-    $sql = "CREATE TABLE IF NOT EXISTS transactions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        customer_id INT NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        description TEXT,
-        bill_image_url TEXT,
-        google_drive_file_id VARCHAR(255),
-        transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
-    )";
-    
-    if (!$conn->query($sql)) {
-        throw new Exception("Error creating transactions table: " . $conn->error);
-    }
-    
-    // Payments table
-    $sql = "CREATE TABLE IF NOT EXISTS payments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        customer_id INT NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        notes TEXT,
-        payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
-    )";
-    
-    if (!$conn->query($sql)) {
-        throw new Exception("Error creating payments table: " . $conn->error);
-    }
-    
-    // Google Drive tokens table
-    $sql = "CREATE TABLE IF NOT EXISTS google_drive_tokens (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        access_token TEXT NOT NULL,
-        refresh_token TEXT,
-        expires_at TIMESTAMP NULL,
-        created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )";
-    
-    if (!$conn->query($sql)) {
-        throw new Exception("Error creating google_drive_tokens table: " . $conn->error);
-    }
-}
-
-// Initialize database on first load
-try {
-    initializeDatabase();
-} catch (Exception $e) {
-    // Log error but don't die, as this might be called multiple times
-    error_log("Database initialization error: " . $e->getMessage());
 }
 
 // Authentication functions
@@ -178,7 +174,11 @@ function requireLogin() {
 
 function authenticateUser($username, $password) {
     $conn = getDBConnection();
+    if (!$conn) return false;
+    
     $stmt = $conn->prepare("SELECT id, username, password_hash FROM users WHERE username = ?");
+    if (!$stmt) return false;
+    
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -194,9 +194,13 @@ function authenticateUser($username, $password) {
 
 function createUser($username, $password) {
     $conn = getDBConnection();
+    if (!$conn) return false;
+    
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
     
     $stmt = $conn->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
+    if (!$stmt) return false;
+    
     $stmt->bind_param("ss", $username, $password_hash);
     
     if ($stmt->execute()) {
@@ -208,9 +212,13 @@ function createUser($username, $password) {
 
 function updateUserPassword($user_id, $new_password) {
     $conn = getDBConnection();
+    if (!$conn) return false;
+    
     $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
     
     $stmt = $conn->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
+    if (!$stmt) return false;
+    
     $stmt->bind_param("si", $password_hash, $user_id);
     
     return $stmt->execute();
@@ -218,7 +226,11 @@ function updateUserPassword($user_id, $new_password) {
 
 function getUserCount() {
     $conn = getDBConnection();
+    if (!$conn) return 0;
+    
     $result = $conn->query("SELECT COUNT(*) as count FROM users");
+    if (!$result) return 0;
+    
     $row = $result->fetch_assoc();
     return $row['count'];
 }
@@ -303,6 +315,7 @@ function exchangeCodeForTokens($code) {
 
 function saveGoogleTokens($user_id, $tokens) {
     $conn = getDBConnection();
+    if (!$conn) return false;
     
     $expires_at = null;
     if (isset($tokens['expires_in'])) {
@@ -311,11 +324,15 @@ function saveGoogleTokens($user_id, $tokens) {
     
     // Delete existing tokens
     $stmt = $conn->prepare("DELETE FROM google_drive_tokens WHERE user_id = ?");
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
+    if ($stmt) {
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+    }
     
     // Insert new tokens
     $stmt = $conn->prepare("INSERT INTO google_drive_tokens (user_id, access_token, refresh_token, expires_at) VALUES (?, ?, ?, ?)");
+    if (!$stmt) return false;
+    
     $stmt->bind_param("isss", $user_id, $tokens['access_token'], $tokens['refresh_token'] ?? null, $expires_at);
     
     return $stmt->execute();
@@ -323,7 +340,11 @@ function saveGoogleTokens($user_id, $tokens) {
 
 function getGoogleTokens($user_id) {
     $conn = getDBConnection();
+    if (!$conn) return null;
+    
     $stmt = $conn->prepare("SELECT * FROM google_drive_tokens WHERE user_id = ? ORDER BY created_date DESC LIMIT 1");
+    if (!$stmt) return null;
+    
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -505,8 +526,18 @@ function isGoogleDriveConnected($user_id) {
 
 function disconnectGoogleDrive($user_id) {
     $conn = getDBConnection();
+    if (!$conn) return false;
+    
     $stmt = $conn->prepare("DELETE FROM google_drive_tokens WHERE user_id = ?");
+    if (!$stmt) return false;
+    
     $stmt->bind_param("i", $user_id);
     return $stmt->execute();
 }
+
+// Only try to initialize database if we can connect
+if (getDBConnection()) {
+    initializeDatabase();
+}
+
 ?>
