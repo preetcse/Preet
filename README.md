@@ -1,253 +1,213 @@
-# Amarjit Electrical Store - Customer Management System
+# ⚡ Amarjit Electrical Store & Repair Centre - Customer Credit Management System
 
-A comprehensive customer credit management system designed specifically for **Amarjit Electrical Store and Repair Centre** in India. This system helps track customer purchases, outstanding debts, payments, and stores bill images securely in Google Drive.
+A comprehensive customer credit management system designed for **Amarjit Electrical Store and Repair Centre** in India. Track customer purchases, payments, outstanding debts, and bill photos with ease.
 
-## 🌟 Features
+## 🌐 **Live Website: [Legendary-Preet.ct.ws](https://legendary-preet.ct.ws)**
 
-### Customer Management
-- Add and manage customer profiles with contact details
-- Search customers by name or phone number
-- Track customer registration dates and addresses
+## 📋 **Two Versions Available**
 
-### Transaction Tracking
-- Record customer purchases and returns
-- Upload bill images directly to Google Drive
-- Maintain detailed transaction history
-- Support for both credit sales and cash returns
+### 🐍 **Flask Version (Original)**
+- **Best for**: VPS hosting, PythonAnywhere, Heroku
+- **Database**: SQLite/PostgreSQL/MySQL
+- **Features**: Full Python Flask application
+- **Files**: `app.py`, `cloud_app.py`, `templates/`, `static/`
 
-### Payment Management
-- Record customer payments with dates and notes
-- Automatic debt calculation and balance updates
-- Payment history tracking
-- Quick payment amount suggestions
+### 🐘 **PHP Version (InfinityFree Compatible)**
+- **Best for**: InfinityFree, shared hosting, cPanel hosting
+- **Database**: MySQL
+- **Features**: Same functionality as Flask version
+- **Files**: `php_version/` directory
 
-### Google Drive Integration
-- Secure cloud storage for bill images (FREE 15GB)
-- Automatic folder organization
-- Shareable links for easy access
-- No local storage required
+## 🚀 **Quick Start**
 
-### Modern Web Interface
-- Responsive design works on phones, tablets, and computers
-- Beautiful and intuitive user interface
-- Quick search functionality
-- Real-time debt calculations
+### **For InfinityFree Hosting (FREE):**
+1. **Use PHP Version**: Upload files from `php_version/` folder
+2. **Follow guide**: Read `INFINITYFREE_DEPLOYMENT_GUIDE.md`
+3. **Deploy**: Free hosting with MySQL database
+4. **Domain**: Works with Legendary-Preet.ct.ws
 
-### Security
-- Password-protected admin access
-- Session-based authentication
-- Secure file uploads
+### **For VPS/Cloud Hosting:**
+1. **Use Flask Version**: Use `cloud_app.py`
+2. **Follow guide**: Read `CLOUD_DEPLOYMENT_GUIDE.md`
+3. **Deploy**: PythonAnywhere, Heroku, or VPS
+4. **Database**: PostgreSQL/MySQL
 
-## 🚀 Quick Start
+## ✨ **Features**
 
-### Prerequisites
-- Python 3.7 or higher
-- Google account (for Google Drive integration)
-- Internet connection
+### 📱 **Quick Billing System**
+- **Lightning-fast customer search** by phone number
+- **Instant transaction processing** (sales & payments)
+- **Real-time debt calculations**
+- **Mobile-optimized interface** for shop use
 
-### Installation
+### 👥 **Customer Management**
+- **Complete customer profiles** (name, phone, address)
+- **Transaction history** tracking
+- **Payment history** with notes
+- **Outstanding debt** calculations
 
-1. **Clone or download this project**
+### 📸 **Bill Photo Management**
+- **Google Drive integration** for bill photo storage
+- **Automatic organization** by customer and date
+- **15GB free storage** for thousands of photos
+- **Easy access** to customer's bill history
+
+### 📊 **Business Analytics**
+- **Dashboard overview** with key statistics
+- **Monthly sales** and payment tracking
+- **Customer debt** summaries
+- **Transaction reports**
+
+### 🔐 **Security Features**
+- **Password-protected** admin access
+- **Secure session** management
+- **SQL injection protection**
+- **HTTPS encryption** support
+
+## 📁 **Project Structure**
+
+```
+amarjit-electrical-store/
+├── php_version/                    # 🐘 PHP Version (InfinityFree)
+│   ├── config.php                  # Database configuration
+│   ├── functions.php               # Business logic
+│   ├── index.php                   # Dashboard
+│   ├── login.php                   # Authentication
+│   ├── setup.php                   # First-time setup
+│   ├── quick_billing.php           # Quick billing system
+│   ├── logout.php                  # Logout
+│   └── includes/
+│       └── sidebar.php             # Navigation
+├── templates/                      # 🐍 Flask HTML templates
+├── static/                         # 🐍 Flask CSS/JS files
+├── app.py                          # 🐍 Flask development version
+├── cloud_app.py                    # 🐍 Flask production version
+├── requirements.txt                # 🐍 Python dependencies
+├── cloud_requirements.txt          # 🐍 Cloud deployment dependencies
+├── Procfile                        # 🐍 Heroku deployment
+├── runtime.txt                     # 🐍 Python version for Heroku
+├── .htaccess                       # 🐘 Shared hosting configuration
+├── index.cgi                       # 🐘 CGI script for shared hosting
+└── Documentation/
+    ├── INFINITYFREE_DEPLOYMENT_GUIDE.md    # 🐘 PHP deployment guide
+    ├── CLOUD_DEPLOYMENT_GUIDE.md           # 🐍 Flask deployment guide
+    ├── QUICK_BILLING_GUIDE.md              # Quick billing usage
+    ├── BILL_PHOTO_MANAGEMENT.md            # Bill photo features
+    ├── GOOGLE_DRIVE_SETUP.md               # Google Drive integration
+    ├── GOOGLE_OAUTH_FIX.md                 # OAuth troubleshooting
+    └── QUICK_START.md                      # 2-minute quick start
+```
+
+## 🛠 **Installation & Deployment**
+
+### **Option 1: InfinityFree (FREE PHP Hosting)**
+
+1. **Download PHP files** from `php_version/` folder
+2. **Read deployment guide**: `INFINITYFREE_DEPLOYMENT_GUIDE.md`
+3. **Upload to InfinityFree** htdocs folder
+4. **Create MySQL database** in control panel
+5. **Configure** `config.php` with database details
+6. **Visit** `/setup.php` to create admin account
+
+### **Option 2: PythonAnywhere ($5/month)**
+
+1. **Use Flask version**: `cloud_app.py`
+2. **Read deployment guide**: `CLOUD_DEPLOYMENT_GUIDE.md`
+3. **Upload files** to PythonAnywhere
+4. **Install dependencies**: `pip install -r cloud_requirements.txt`
+5. **Configure database** and environment variables
+6. **Set up custom domain**
+
+### **Option 3: Heroku (Free/Paid)**
+
+1. **Use Flask version**: `cloud_app.py`
+2. **Deploy with Git**:
    ```bash
-   git clone <repository-url>
-   cd electrical-store
+   git clone https://github.com/preetcse/Preet
+   cd Preet
+   heroku create your-app-name
+   heroku addons:create heroku-postgresql:hobby-dev
+   git push heroku main
    ```
 
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+## 📱 **Mobile Usage**
 
-3. **Set up Google Drive API** (See detailed instructions below)
+Perfect for electrical shop management:
 
-4. **Run the application**
-   ```bash
-   python app.py
-   ```
+1. **Bookmark** the quick billing page on your phone
+2. **Search customers** instantly by phone number
+3. **Record sales** and payments on the spot
+4. **View bill photos** for any customer
+5. **Track outstanding debts** in real-time
 
-5. **Open in browser**
-   - Go to: `http://localhost:5000`
-   - Complete initial setup by creating admin account
+## 🎯 **Key Benefits**
 
-## 🔧 Google Drive Setup
+### **For Your Business:**
+- ✅ **Digital transformation** from paper records
+- ✅ **Never lose customer data** with cloud storage
+- ✅ **Professional image** with organized system
+- ✅ **Mobile accessibility** from anywhere
+- ✅ **Real-time debt tracking**
+- ✅ **Automated calculations**
 
-### Step 1: Create Google Cloud Project
+### **For Your Customers:**
+- ✅ **Quick service** with instant lookup
+- ✅ **Transparent records** with bill photos
+- ✅ **Professional experience**
+- ✅ **Easy payment tracking**
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Name it "Amarjit Electrical Store" or similar
+## 🔧 **Technical Specifications**
 
-### Step 2: Enable Google Drive API
+### **PHP Version Requirements:**
+- **PHP**: 7.4 or higher
+- **MySQL**: 5.7 or higher
+- **Web Server**: Apache with mod_rewrite
+- **Storage**: 50MB+ for application files
+- **Hosting**: Any shared hosting with PHP/MySQL
 
-1. In the Google Cloud Console, go to "APIs & Services" > "Library"
-2. Search for "Google Drive API"
-3. Click on it and press "Enable"
+### **Flask Version Requirements:**
+- **Python**: 3.7 or higher
+- **Database**: SQLite/PostgreSQL/MySQL
+- **Memory**: 512MB+ RAM
+- **Storage**: 100MB+ for application
+- **Hosting**: VPS, PythonAnywhere, Heroku
 
-### Step 3: Create Credentials
+## 📚 **Documentation**
 
-1. Go to "APIs & Services" > "Credentials"
-2. Click "Create Credentials" > "OAuth 2.0 Client IDs"
-3. Choose "Web application"
-4. Add authorized redirect URI: `http://localhost:5000/google_callback`
-5. Download the JSON file
+- 🚀 **[Quick Start Guide](QUICK_START.md)** - Get started in 2 minutes
+- 🐘 **[InfinityFree Deployment](INFINITYFREE_DEPLOYMENT_GUIDE.md)** - FREE hosting setup
+- 🐍 **[Cloud Deployment](CLOUD_DEPLOYMENT_GUIDE.md)** - Professional hosting
+- ⚡ **[Quick Billing Guide](QUICK_BILLING_GUIDE.md)** - Mobile billing system
+- 📸 **[Bill Photo Management](BILL_PHOTO_MANAGEMENT.md)** - Google Drive integration
+- 🔧 **[Google Drive Setup](GOOGLE_DRIVE_SETUP.md)** - Cloud storage configuration
 
-### Step 4: Configure Application
+## 🆘 **Support & Troubleshooting**
 
-1. Rename the downloaded JSON file to `credentials.json`
-2. Place it in your project root directory
-3. The file should look like the `credentials.json.template` provided
+- 📖 **Documentation**: All guides included in repository
+- 🐛 **Issues**: Report bugs via GitHub Issues
+- 💡 **Features**: Request features via GitHub Issues
+- 🔧 **Setup Help**: Follow step-by-step guides
 
-### Important Notes:
-- Google Drive provides **15GB free storage** - more than enough for bill images
-- Images are stored in a dedicated "Amarjit Electrical Store" folder
-- All uploaded files are accessible from your Google Drive
-- No charges for Google Drive API usage within free limits
+## 📄 **License**
 
-## 📱 How to Use
+This project is created for **Amarjit Electrical Store and Repair Centre** and is available for educational and commercial use.
 
-### First Time Setup
-1. Run the application and go to `http://localhost:5000`
-2. Create admin account (username/password)
-3. Connect Google Drive from the dashboard
-4. Start adding customers!
+## 🤝 **Contributing**
 
-### Daily Operations
+This project is specifically designed for Amarjit Electrical Store. For feature requests or bug reports, please open an issue.
 
-#### Adding a Customer
-1. Click "Add New Customer" 
-2. Enter name, phone number, and address
-3. Phone numbers must be unique
+## 🏪 **About Amarjit Electrical Store**
 
-#### Recording a Sale
-1. Find customer or search by name/phone
-2. Click "Record Sale" 
-3. Enter amount, description, and upload bill image
-4. System automatically updates customer debt
-
-#### Recording a Payment
-1. Go to customer profile
-2. Click "Record Payment"
-3. Enter payment amount and date
-4. System automatically reduces outstanding debt
-
-#### Viewing Reports
-- Dashboard shows total customers and outstanding debts
-- Individual customer pages show complete transaction history
-- All bill images are linked and viewable
-
-## 💾 Data Storage
-
-### Local Database (SQLite)
-- Customer information
-- Transaction records
-- Payment history
-- Database file: `electrical_store.db`
-
-### Google Drive
-- Bill images and receipts
-- Organized in dedicated folder
-- Accessible from any device
-- Free 15GB storage
-
-## 🔒 Security Features
-
-- Password-protected access
-- Session-based authentication
-- Secure file uploads
-- Google OAuth2 integration
-- No sensitive data in URLs
-
-## 📊 Business Benefits
-
-### For Store Management
-- **No more lost bills** - All images stored in cloud
-- **Accurate debt tracking** - Automatic calculations
-- **Customer history** - Complete purchase records
-- **Payment reminders** - Easy to see who owes money
-
-### For Customers
-- **Transparent records** - Complete transaction history
-- **Flexible payments** - Pay in installments
-- **Digital receipts** - Accessible bill images
-
-### Cost Savings
-- **Free cloud storage** (Google Drive)
-- **No subscription fees** - One-time setup
-- **Paperless operations** - Reduced physical storage
-
-## 🛠 Troubleshooting
-
-### Common Issues
-
-**Google Drive not connecting:**
-- Check `credentials.json` file exists
-- Verify redirect URI in Google Cloud Console
-- Ensure Google Drive API is enabled
-
-**Application won't start:**
-- Check Python version (3.7+)
-- Install all dependencies: `pip install -r requirements.txt`
-- Check port 5000 is available
-
-**Images not uploading:**
-- Verify Google Drive connection
-- Check file size (max 16MB)
-- Ensure internet connection
-
-### Getting Help
-
-1. Check error messages in terminal
-2. Verify Google Drive API setup
-3. Ensure all dependencies are installed
-4. Restart the application
-
-## 📱 Mobile Usage
-
-The system is fully responsive and works great on mobile devices:
-- Add customers on the go
-- Take photos of bills directly
-- Record payments instantly
-- Search customers quickly
-
-## 🔄 Backup and Recovery
-
-### Automatic Backups
-- Bill images: Stored in Google Drive (safe)
-- Database: Located at `electrical_store.db`
-
-### Manual Backup
-1. Copy `electrical_store.db` file to safe location
-2. Google Drive images are already backed up in cloud
-
-### Recovery
-1. Restore `electrical_store.db` file
-2. Reconnect Google Drive
-3. All data and images will be restored
-
-## 📈 Future Enhancements
-
-Possible additions for the future:
-- SMS payment reminders
-- Inventory management
-- Sales reports and analytics
-- Multiple user accounts
-- Mobile app
-- WhatsApp integration
-
-## ❓ Support
-
-For technical support or questions about the system:
-1. Check this README first
-2. Review error messages
-3. Verify Google Drive setup
-4. Contact system administrator
-
-## 📄 License
-
-This software is created specifically for Amarjit Electrical Store and Repair Centre. 
+**Amarjit Electrical Store and Repair Centre** is an electrical accessories store in India serving customers with quality products and repair services. This system helps manage customer credit and maintain professional business records.
 
 ---
 
-**Made with ❤️ for Amarjit Electrical Store and Repair Centre**
+## 🌟 **Get Started Today!**
 
-*Simplifying customer management, one transaction at a time.*
+1. **Choose your hosting**: InfinityFree (free) or PythonAnywhere (paid)
+2. **Follow the deployment guide** for your chosen platform
+3. **Set up your admin account**
+4. **Start managing customers** digitally
+5. **Enjoy professional business management!**
+
+**Transform your electrical store with modern customer management!** ⚡🏪📱
