@@ -208,6 +208,57 @@ function getCustomerPayments($customer_id, $limit = 50) {
 }
 
 /**
+ * Transaction Functions
+ */
+
+function addTransaction($customer_id, $amount, $description, $bill_image_url = null, $google_drive_file_id = null) {
+    $conn = getDBConnection();
+    
+    $stmt = $conn->prepare("INSERT INTO transactions (customer_id, amount, description, bill_image_url, google_drive_file_id) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("idsss", $customer_id, $amount, $description, $bill_image_url, $google_drive_file_id);
+    
+    if ($stmt->execute()) {
+        // Update customer's total debt
+        updateCustomerDebt($customer_id);
+        return $conn->insert_id;
+    }
+    
+    return false;
+}
+
+function addPayment($customer_id, $amount, $notes = null) {
+    $conn = getDBConnection();
+    
+    $stmt = $conn->prepare("INSERT INTO payments (customer_id, amount, notes) VALUES (?, ?, ?)");
+    $stmt->bind_param("ids", $customer_id, $amount, $notes);
+    
+    if ($stmt->execute()) {
+        // Update customer's total debt
+        updateCustomerDebt($customer_id);
+        return $conn->insert_id;
+    }
+    
+    return false;
+}
+
+function updateCustomerDebt($customer_id) {
+    $conn = getDBConnection();
+    
+    // Calculate total debt = total transactions - total payments
+    $stmt = $conn->prepare("
+        UPDATE customers 
+        SET total_debt = (
+            SELECT COALESCE(SUM(t.amount), 0) - COALESCE(SUM(p.amount), 0)
+            FROM (SELECT amount FROM transactions WHERE customer_id = ?) t
+            LEFT JOIN (SELECT amount FROM payments WHERE customer_id = ?) p ON 1=1
+        )
+        WHERE id = ?
+    ");
+    $stmt->bind_param("iii", $customer_id, $customer_id, $customer_id);
+    return $stmt->execute();
+}
+
+/**
  * Statistics Functions
  */
 

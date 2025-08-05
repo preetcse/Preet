@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <i class="fas fa-phone me-1 text-success"></i>Phone Number *
                                         </label>
                                         <input type="tel" class="form-control" id="phone" name="phone" 
-                                               value="<?php echo htmlspecialchars($phone ?? ''); ?>" 
+                                               value="<?php echo htmlspecialchars($phone ?? $_GET['phone'] ?? ''); ?>" 
                                                required autocomplete="off" placeholder="Enter phone number">
                                         <div class="form-text">Phone number must be unique</div>
                                     </div>
