@@ -453,4 +453,50 @@ function getCustomerWithRecentBills($phone) {
         'total_payments' => $total_payments
     ];
 }
+
+function getAllTransactions($limit = 100) {
+    $conn = getDBConnection();
+    if (!$conn) return [];
+    
+    $stmt = $conn->prepare("
+        SELECT t.*, c.name as customer_name, c.phone as customer_phone 
+        FROM transactions t 
+        LEFT JOIN customers c ON t.customer_id = c.id 
+        ORDER BY t.transaction_date DESC 
+        LIMIT ?
+    ");
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $transactions = [];
+    while ($row = $result->fetch_assoc()) {
+        $transactions[] = $row;
+    }
+    
+    return $transactions;
+}
+
+function getAllPayments($limit = 100) {
+    $conn = getDBConnection();
+    if (!$conn) return [];
+    
+    $stmt = $conn->prepare("
+        SELECT p.*, c.name as customer_name, c.phone as customer_phone 
+        FROM payments p 
+        LEFT JOIN customers c ON p.customer_id = c.id 
+        ORDER BY p.payment_date DESC 
+        LIMIT ?
+    ");
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $payments = [];
+    while ($row = $result->fetch_assoc()) {
+        $payments[] = $row;
+    }
+    
+    return $payments;
+}
 ?>
