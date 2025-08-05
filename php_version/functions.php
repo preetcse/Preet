@@ -5,6 +5,18 @@
  */
 
 /**
+ * Utility Functions
+ */
+
+function validatePhone($phone) {
+    // Remove all non-digit characters
+    $phone = preg_replace('/[^0-9]/', '', $phone);
+    
+    // Check if phone number is between 10-15 digits (international format)
+    return strlen($phone) >= 10 && strlen($phone) <= 15;
+}
+
+/**
  * Customer Management Functions
  */
 
@@ -12,9 +24,9 @@ function createCustomer($name, $phone, $address = '') {
     $conn = getDBConnection();
     
     // Clean inputs
-    $name = cleanInput($name);
-    $phone = cleanInput($phone);
-    $address = cleanInput($address);
+    $name = sanitizeInput($name);
+    $phone = sanitizeInput($phone);
+    $address = sanitizeInput($address);
     
     // Validate phone number
     if (!validatePhone($phone)) {
@@ -104,8 +116,8 @@ function createTransaction($customer_id, $amount, $description, $transaction_dat
     $conn = getDBConnection();
     
     // Clean inputs
-    $description = cleanInput($description);
-    $transaction_type = cleanInput($transaction_type);
+    $description = sanitizeInput($description);
+    $transaction_type = sanitizeInput($transaction_type);
     
     // Insert transaction
     $stmt = $conn->prepare("INSERT INTO transactions (customer_id, amount, description, transaction_date, transaction_type, bill_image_url, bill_image_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -165,7 +177,7 @@ function createPayment($customer_id, $amount, $payment_date, $notes = '') {
     $conn = getDBConnection();
     
     // Clean inputs
-    $notes = cleanInput($notes);
+    $notes = sanitizeInput($notes);
     
     // Insert payment
     $stmt = $conn->prepare("INSERT INTO payments (customer_id, amount, payment_date, notes) VALUES (?, ?, ?, ?)");

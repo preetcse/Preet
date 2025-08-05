@@ -11,7 +11,7 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = cleanInput($_POST['username'] ?? '');
+    $username = sanitizeInput($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
     
