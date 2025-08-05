@@ -13,19 +13,19 @@ if (!defined('CONFIG_LOADED')) {
 // IMPORTANT: Replace these with your actual InfinityFree database details!
 // You can find these in your InfinityFree control panel under "MySQL Databases"
 
-define('DB_HOST', 'sql200.infinityfree.com'); // Your InfinityFree MySQL host (usually sqlXXX.infinityfree.com)
-define('DB_USER', 'if0_37114663'); // Your InfinityFree database username (format: if0_XXXXXXXX)
-define('DB_PASS', 'YourDatabasePassword'); // Your InfinityFree database password
-define('DB_NAME', 'if0_37114663_electrical_store'); // Your database name (format: if0_XXXXXXXX_electrical_store)
+define('DB_HOST', 'sql110.infinityfree.com'); // Your InfinityFree MySQL host (usually sqlXXX.infinityfree.com)
+define('DB_USER', 'if0_39147172'); // Your InfinityFree database username (format: if0_XXXXXXXX)
+define('DB_PASS', 'Lovepreet1322'); // Your InfinityFree database password
+define('DB_NAME', 'if0_39147172_amarjit_1322'); // Your database name (format: if0_XXXXXXXX_electrical_store)
 
 // Application settings
 define('APP_NAME', 'Amarjit Electrical Store');
 define('APP_VERSION', '2.0.0');
 
 // Google Drive settings
-define('GOOGLE_DRIVE_ENABLED', true);
-define('GOOGLE_CLIENT_ID', ''); // Your Google OAuth Client ID (from Google Cloud Console)
-define('GOOGLE_CLIENT_SECRET', ''); // Your Google OAuth Client Secret (from Google Cloud Console)
+define('GOOGLE_DRIVE_ENABLED', true); // Set to true to enable Google Drive
+define('GOOGLE_CLIENT_ID', '2633417852-5ko03ljkcc8npsa23pg3im3lcmpf7ef7.apps.googleusercontent.com'); // Your Google OAuth Client ID (from Google Cloud Console)
+define('GOOGLE_CLIENT_SECRET', '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'); // Your Google OAuth Client Secret (from Google Cloud Console)
 define('GOOGLE_REDIRECT_URI', 'https://legendary-preet.ct.ws/google_callback.php'); // OAuth redirect URI
 define('GOOGLE_FOLDER_NAME', 'Amarjit Electrical Store Bills'); // Folder name in Google Drive
 
