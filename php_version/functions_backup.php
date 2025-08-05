@@ -2,7 +2,6 @@
 /**
  * Helper Functions for Amarjit Electrical Store
  * PHP Version for InfinityFree Hosting
- * CLEAN VERSION - No Duplicates
  */
 
 /**
@@ -23,7 +22,6 @@ function validatePhone($phone) {
 
 function createCustomer($name, $phone, $address = '') {
     $conn = getDBConnection();
-    if (!$conn) return ['success' => false, 'message' => 'Database connection failed'];
     
     // Clean inputs
     $name = sanitizeInput($name);
@@ -37,8 +35,6 @@ function createCustomer($name, $phone, $address = '') {
     
     // Check if customer already exists
     $stmt = $conn->prepare("SELECT id FROM customers WHERE phone = ?");
-    if (!$stmt) return ['success' => false, 'message' => 'Database error'];
-    
     $stmt->bind_param("s", $phone);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -49,8 +45,6 @@ function createCustomer($name, $phone, $address = '') {
     
     // Insert new customer
     $stmt = $conn->prepare("INSERT INTO customers (name, phone, address) VALUES (?, ?, ?)");
-    if (!$stmt) return ['success' => false, 'message' => 'Database error'];
-    
     $stmt->bind_param("sss", $name, $phone, $address);
     
     if ($stmt->execute()) {
@@ -62,11 +56,8 @@ function createCustomer($name, $phone, $address = '') {
 
 function getCustomer($id) {
     $conn = getDBConnection();
-    if (!$conn) return null;
     
     $stmt = $conn->prepare("SELECT * FROM customers WHERE id = ?");
-    if (!$stmt) return null;
-    
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -79,11 +70,8 @@ function getCustomer($id) {
 
 function getCustomerByPhone($phone) {
     $conn = getDBConnection();
-    if (!$conn) return null;
     
     $stmt = $conn->prepare("SELECT * FROM customers WHERE phone = ?");
-    if (!$stmt) return null;
-    
     $stmt->bind_param("s", $phone);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -96,16 +84,13 @@ function getCustomerByPhone($phone) {
 
 function getAllCustomers($search = '', $limit = 20, $offset = 0) {
     $conn = getDBConnection();
-    if (!$conn) return [];
     
     if ($search) {
         $search = '%' . $search . '%';
         $stmt = $conn->prepare("SELECT * FROM customers WHERE name LIKE ? OR phone LIKE ? ORDER BY total_debt DESC LIMIT ? OFFSET ?");
-        if (!$stmt) return [];
         $stmt->bind_param("ssii", $search, $search, $limit, $offset);
     } else {
         $stmt = $conn->prepare("SELECT * FROM customers ORDER BY total_debt DESC LIMIT ? OFFSET ?");
-        if (!$stmt) return [];
         $stmt->bind_param("ii", $limit, $offset);
     }
     
@@ -120,25 +105,8 @@ function getAllCustomers($search = '', $limit = 20, $offset = 0) {
     return $customers;
 }
 
-function updateCustomerDebt($customer_id) {
-    $conn = getDBConnection();
-    if (!$conn) return false;
-    
-    // Calculate total debt = total transactions - total payments
-    $stmt = $conn->prepare("
-        UPDATE customers 
-        SET total_debt = (
-            SELECT COALESCE(SUM(t.amount), 0) - COALESCE(SUM(p.amount), 0)
-            FROM (SELECT amount FROM transactions WHERE customer_id = ?) t
-            LEFT JOIN (SELECT amount FROM payments WHERE customer_id = ?) p ON 1=1
-        )
-        WHERE id = ?
-    ");
-    if (!$stmt) return false;
-    
-    $stmt->bind_param("iii", $customer_id, $customer_id, $customer_id);
-    return $stmt->execute();
-}
+// updateCustomerDebt function is defined later in the file (around line 244)
+// This duplicate declaration has been removed to prevent redeclaration error
 
 /**
  * Transaction Management Functions
@@ -146,21 +114,22 @@ function updateCustomerDebt($customer_id) {
 
 function createTransaction($customer_id, $amount, $description, $transaction_date, $transaction_type = 'purchase', $bill_image_url = null, $bill_image_id = null) {
     $conn = getDBConnection();
-    if (!$conn) return ['success' => false, 'message' => 'Database connection failed'];
     
     // Clean inputs
     $description = sanitizeInput($description);
     $transaction_type = sanitizeInput($transaction_type);
     
     // Insert transaction
-    $stmt = $conn->prepare("INSERT INTO transactions (customer_id, amount, description, transaction_date, transaction_type, bill_image_url, google_drive_file_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    if (!$stmt) return ['success' => false, 'message' => 'Database error'];
-    
+    $stmt = $conn->prepare("INSERT INTO transactions (customer_id, amount, description, transaction_date, transaction_type, bill_image_url, bill_image_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("idsssss", $customer_id, $amount, $description, $transaction_date, $transaction_type, $bill_image_url, $bill_image_id);
     
     if ($stmt->execute()) {
         // Update customer debt
-        updateCustomerDebt($customer_id);
+        if ($transaction_type === 'purchase') {
+            updateCustomerDebt($customer_id, $amount, 'add');
+        } else {
+            updateCustomerDebt($customer_id, $amount, 'subtract');
+        }
         
         return ['success' => true, 'message' => 'Transaction added successfully', 'transaction_id' => $conn->insert_id];
     } else {
@@ -170,11 +139,8 @@ function createTransaction($customer_id, $amount, $description, $transaction_dat
 
 function getCustomerTransactions($customer_id, $limit = 50) {
     $conn = getDBConnection();
-    if (!$conn) return [];
     
     $stmt = $conn->prepare("SELECT * FROM transactions WHERE customer_id = ? ORDER BY transaction_date DESC LIMIT ?");
-    if (!$stmt) return [];
-    
     $stmt->bind_param("ii", $customer_id, $limit);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -189,11 +155,8 @@ function getCustomerTransactions($customer_id, $limit = 50) {
 
 function getRecentTransactions($limit = 10) {
     $conn = getDBConnection();
-    if (!$conn) return [];
     
-    $stmt = $conn->prepare("SELECT t.*, c.name as customer_name, c.phone as customer_phone FROM transactions t LEFT JOIN customers c ON t.customer_id = c.id ORDER BY t.created_date DESC LIMIT ?");
-    if (!$stmt) return [];
-    
+    $stmt = $conn->prepare("SELECT t.*, c.name as customer_name, c.phone as customer_phone FROM transactions t JOIN customers c ON t.customer_id = c.id ORDER BY t.created_date DESC LIMIT ?");
     $stmt->bind_param("i", $limit);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -204,49 +167,6 @@ function getRecentTransactions($limit = 10) {
     }
     
     return $transactions;
-}
-
-function getAllTransactions($limit = 100) {
-    $conn = getDBConnection();
-    if (!$conn) return [];
-    
-    $stmt = $conn->prepare("
-        SELECT t.*, c.name as customer_name, c.phone as customer_phone 
-        FROM transactions t 
-        LEFT JOIN customers c ON t.customer_id = c.id 
-        ORDER BY t.transaction_date DESC 
-        LIMIT ?
-    ");
-    if (!$stmt) return [];
-    
-    $stmt->bind_param("i", $limit);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $transactions = [];
-    while ($row = $result->fetch_assoc()) {
-        $transactions[] = $row;
-    }
-    
-    return $transactions;
-}
-
-function addTransaction($customer_id, $amount, $description, $bill_image_url = null, $google_drive_file_id = null) {
-    $conn = getDBConnection();
-    if (!$conn) return false;
-    
-    $stmt = $conn->prepare("INSERT INTO transactions (customer_id, amount, description, bill_image_url, google_drive_file_id) VALUES (?, ?, ?, ?, ?)");
-    if (!$stmt) return false;
-    
-    $stmt->bind_param("idsss", $customer_id, $amount, $description, $bill_image_url, $google_drive_file_id);
-    
-    if ($stmt->execute()) {
-        // Update customer's total debt
-        updateCustomerDebt($customer_id);
-        return $conn->insert_id;
-    }
-    
-    return false;
 }
 
 /**
@@ -255,20 +175,17 @@ function addTransaction($customer_id, $amount, $description, $bill_image_url = n
 
 function createPayment($customer_id, $amount, $payment_date, $notes = '') {
     $conn = getDBConnection();
-    if (!$conn) return ['success' => false, 'message' => 'Database connection failed'];
     
     // Clean inputs
     $notes = sanitizeInput($notes);
     
     // Insert payment
     $stmt = $conn->prepare("INSERT INTO payments (customer_id, amount, payment_date, notes) VALUES (?, ?, ?, ?)");
-    if (!$stmt) return ['success' => false, 'message' => 'Database error'];
-    
     $stmt->bind_param("idss", $customer_id, $amount, $payment_date, $notes);
     
     if ($stmt->execute()) {
         // Update customer debt
-        updateCustomerDebt($customer_id);
+        updateCustomerDebt($customer_id, $amount, 'subtract');
         
         return ['success' => true, 'message' => 'Payment recorded successfully', 'payment_id' => $conn->insert_id];
     } else {
@@ -278,11 +195,8 @@ function createPayment($customer_id, $amount, $payment_date, $notes = '') {
 
 function getCustomerPayments($customer_id, $limit = 50) {
     $conn = getDBConnection();
-    if (!$conn) return [];
     
     $stmt = $conn->prepare("SELECT * FROM payments WHERE customer_id = ? ORDER BY payment_date DESC LIMIT ?");
-    if (!$stmt) return [];
-    
     $stmt->bind_param("ii", $customer_id, $limit);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -295,38 +209,29 @@ function getCustomerPayments($customer_id, $limit = 50) {
     return $payments;
 }
 
-function getAllPayments($limit = 100) {
+/**
+ * Transaction Functions
+ */
+
+function addTransaction($customer_id, $amount, $description, $bill_image_url = null, $google_drive_file_id = null) {
     $conn = getDBConnection();
-    if (!$conn) return [];
     
-    $stmt = $conn->prepare("
-        SELECT p.*, c.name as customer_name, c.phone as customer_phone 
-        FROM payments p 
-        LEFT JOIN customers c ON p.customer_id = c.id 
-        ORDER BY p.payment_date DESC 
-        LIMIT ?
-    ");
-    if (!$stmt) return [];
+    $stmt = $conn->prepare("INSERT INTO transactions (customer_id, amount, description, bill_image_url, google_drive_file_id) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("idsss", $customer_id, $amount, $description, $bill_image_url, $google_drive_file_id);
     
-    $stmt->bind_param("i", $limit);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $payments = [];
-    while ($row = $result->fetch_assoc()) {
-        $payments[] = $row;
+    if ($stmt->execute()) {
+        // Update customer's total debt
+        updateCustomerDebt($customer_id);
+        return $conn->insert_id;
     }
     
-    return $payments;
+    return false;
 }
 
 function addPayment($customer_id, $amount, $notes = null) {
     $conn = getDBConnection();
-    if (!$conn) return false;
     
     $stmt = $conn->prepare("INSERT INTO payments (customer_id, amount, notes) VALUES (?, ?, ?)");
-    if (!$stmt) return false;
-    
     $stmt->bind_param("ids", $customer_id, $amount, $notes);
     
     if ($stmt->execute()) {
@@ -338,42 +243,50 @@ function addPayment($customer_id, $amount, $notes = null) {
     return false;
 }
 
+function updateCustomerDebt($customer_id) {
+    $conn = getDBConnection();
+    
+    // Calculate total debt = total transactions - total payments
+    $stmt = $conn->prepare("
+        UPDATE customers 
+        SET total_debt = (
+            SELECT COALESCE(SUM(t.amount), 0) - COALESCE(SUM(p.amount), 0)
+            FROM (SELECT amount FROM transactions WHERE customer_id = ?) t
+            LEFT JOIN (SELECT amount FROM payments WHERE customer_id = ?) p ON 1=1
+        )
+        WHERE id = ?
+    ");
+    $stmt->bind_param("iii", $customer_id, $customer_id, $customer_id);
+    return $stmt->execute();
+}
+
 /**
  * Statistics Functions
  */
 
 function getDashboardStats() {
     $conn = getDBConnection();
-    if (!$conn) return ['total_customers' => 0, 'total_debt' => 0, 'monthly_transactions' => 0, 'monthly_payments' => 0];
     
     // Total customers
     $result = $conn->query("SELECT COUNT(*) as count FROM customers");
-    $total_customers = $result ? $result->fetch_assoc()['count'] : 0;
+    $total_customers = $result->fetch_assoc()['count'];
     
     // Total debt
     $result = $conn->query("SELECT SUM(total_debt) as total FROM customers");
-    $total_debt = $result ? ($result->fetch_assoc()['total'] ?? 0) : 0;
+    $total_debt = $result->fetch_assoc()['total'] ?? 0;
     
     // Total transactions this month
     $current_month = date('Y-m');
     $stmt = $conn->prepare("SELECT COUNT(*) as count FROM transactions WHERE DATE_FORMAT(transaction_date, '%Y-%m') = ?");
-    if ($stmt) {
-        $stmt->bind_param("s", $current_month);
-        $stmt->execute();
-        $monthly_transactions = $stmt->get_result()->fetch_assoc()['count'];
-    } else {
-        $monthly_transactions = 0;
-    }
+    $stmt->bind_param("s", $current_month);
+    $stmt->execute();
+    $monthly_transactions = $stmt->get_result()->fetch_assoc()['count'];
     
     // Total payments this month
     $stmt = $conn->prepare("SELECT SUM(amount) as total FROM payments WHERE DATE_FORMAT(payment_date, '%Y-%m') = ?");
-    if ($stmt) {
-        $stmt->bind_param("s", $current_month);
-        $stmt->execute();
-        $monthly_payments = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
-    } else {
-        $monthly_payments = 0;
-    }
+    $stmt->bind_param("s", $current_month);
+    $stmt->execute();
+    $monthly_payments = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
     
     return [
         'total_customers' => $total_customers,
@@ -387,14 +300,14 @@ function getDashboardStats() {
  * User Authentication Functions
  */
 
+// authenticateUser function is defined in config.php (line 175)
+// This duplicate declaration has been removed to prevent redeclaration error
+
 function createUser($username, $password) {
     $conn = getDBConnection();
-    if (!$conn) return ['success' => false, 'message' => 'Database connection failed'];
     
     // Check if user already exists
     $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
-    if (!$stmt) return ['success' => false, 'message' => 'Database error'];
-    
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -406,8 +319,6 @@ function createUser($username, $password) {
     // Hash password and create user
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
     $stmt = $conn->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
-    if (!$stmt) return ['success' => false, 'message' => 'Database error'];
-    
     $stmt->bind_param("ss", $username, $password_hash);
     
     if ($stmt->execute()) {
@@ -419,12 +330,59 @@ function createUser($username, $password) {
 
 function userExists() {
     $conn = getDBConnection();
-    if (!$conn) return false;
-    
     $result = $conn->query("SELECT COUNT(*) as count FROM users");
-    if (!$result) return false;
-    
     return $result->fetch_assoc()['count'] > 0;
+}
+
+/**
+ * File Upload Functions
+ */
+
+function handleFileUpload($file, $customer_phone) {
+    if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
+        return null;
+    }
+    
+    // Validate file type
+    if (!in_array($file['type'], ALLOWED_IMAGE_TYPES)) {
+        throw new Exception('Invalid file type. Only JPEG, PNG, and GIF are allowed.');
+    }
+    
+    // Validate file size
+    if ($file['size'] > MAX_UPLOAD_SIZE) {
+        throw new Exception('File size too large. Maximum size is 10MB.');
+    }
+    
+    // Create upload directory if it doesn't exist
+    if (!is_dir(UPLOAD_DIR)) {
+        mkdir(UPLOAD_DIR, 0755, true);
+    }
+    
+    // Generate unique filename
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = $customer_phone . '_' . date('Ymd_His') . '.' . $extension;
+    $filepath = UPLOAD_DIR . $filename;
+    
+    // Move uploaded file
+    if (move_uploaded_file($file['tmp_name'], $filepath)) {
+        // Upload to Google Drive if enabled
+        if (GOOGLE_DRIVE_ENABLED) {
+            $drive_result = uploadToGoogleDrive($filepath, $filename);
+            if ($drive_result) {
+                // Delete local file after successful upload
+                unlink($filepath);
+                return $drive_result;
+            }
+        }
+        
+        // Return local file info if Google Drive is disabled
+        return [
+            'id' => null,
+            'url' => SITE_URL . '/' . $filepath
+        ];
+    }
+    
+    throw new Exception('Failed to upload file.');
 }
 
 /**
@@ -433,12 +391,9 @@ function userExists() {
 
 function searchCustomers($query) {
     $conn = getDBConnection();
-    if (!$conn) return [];
     
     $search = '%' . $query . '%';
     $stmt = $conn->prepare("SELECT id, name, phone, total_debt FROM customers WHERE name LIKE ? OR phone LIKE ? ORDER BY total_debt DESC LIMIT 10");
-    if (!$stmt) return [];
-    
     $stmt->bind_param("ss", $search, $search);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -459,11 +414,7 @@ function getCustomerWithRecentBills($phone) {
     
     // Get recent transactions with bill photos
     $conn = getDBConnection();
-    if (!$conn) return null;
-    
     $stmt = $conn->prepare("SELECT * FROM transactions WHERE customer_id = ? AND bill_image_url IS NOT NULL ORDER BY transaction_date DESC LIMIT 5");
-    if (!$stmt) return null;
-    
     $stmt->bind_param("i", $customer['id']);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -480,22 +431,14 @@ function getCustomerWithRecentBills($phone) {
     
     // Get total counts
     $stmt = $conn->prepare("SELECT COUNT(*) as count FROM transactions WHERE customer_id = ?");
-    if ($stmt) {
-        $stmt->bind_param("i", $customer['id']);
-        $stmt->execute();
-        $total_transactions = $stmt->get_result()->fetch_assoc()['count'];
-    } else {
-        $total_transactions = 0;
-    }
+    $stmt->bind_param("i", $customer['id']);
+    $stmt->execute();
+    $total_transactions = $stmt->get_result()->fetch_assoc()['count'];
     
     $stmt = $conn->prepare("SELECT COUNT(*) as count FROM payments WHERE customer_id = ?");
-    if ($stmt) {
-        $stmt->bind_param("i", $customer['id']);
-        $stmt->execute();
-        $total_payments = $stmt->get_result()->fetch_assoc()['count'];
-    } else {
-        $total_payments = 0;
-    }
+    $stmt->bind_param("i", $customer['id']);
+    $stmt->execute();
+    $total_payments = $stmt->get_result()->fetch_assoc()['count'];
     
     return [
         'found' => true,
@@ -511,56 +454,49 @@ function getCustomerWithRecentBills($phone) {
     ];
 }
 
-/**
- * File Upload Functions
- */
+function getAllTransactions($limit = 100) {
+    $conn = getDBConnection();
+    if (!$conn) return [];
+    
+    $stmt = $conn->prepare("
+        SELECT t.*, c.name as customer_name, c.phone as customer_phone 
+        FROM transactions t 
+        LEFT JOIN customers c ON t.customer_id = c.id 
+        ORDER BY t.transaction_date DESC 
+        LIMIT ?
+    ");
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $transactions = [];
+    while ($row = $result->fetch_assoc()) {
+        $transactions[] = $row;
+    }
+    
+    return $transactions;
+}
 
-function handleFileUpload($file, $customer_phone) {
-    if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
-        return null;
+function getAllPayments($limit = 100) {
+    $conn = getDBConnection();
+    if (!$conn) return [];
+    
+    $stmt = $conn->prepare("
+        SELECT p.*, c.name as customer_name, c.phone as customer_phone 
+        FROM payments p 
+        LEFT JOIN customers c ON p.customer_id = c.id 
+        ORDER BY p.payment_date DESC 
+        LIMIT ?
+    ");
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $payments = [];
+    while ($row = $result->fetch_assoc()) {
+        $payments[] = $row;
     }
     
-    // Validate file type (basic check)
-    $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-    if (!in_array($file['type'], $allowed_types)) {
-        throw new Exception('Invalid file type. Only JPEG, PNG, and GIF are allowed.');
-    }
-    
-    // Validate file size (5MB max)
-    if ($file['size'] > 5 * 1024 * 1024) {
-        throw new Exception('File size too large. Maximum size is 5MB.');
-    }
-    
-    // Create upload directory if it doesn't exist
-    $upload_dir = 'uploads/';
-    if (!is_dir($upload_dir)) {
-        mkdir($upload_dir, 0755, true);
-    }
-    
-    // Generate unique filename
-    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = $customer_phone . '_' . date('Ymd_His') . '.' . $extension;
-    $filepath = $upload_dir . $filename;
-    
-    // Move uploaded file
-    if (move_uploaded_file($file['tmp_name'], $filepath)) {
-        // Try to upload to Google Drive if enabled
-        if (defined('GOOGLE_DRIVE_ENABLED') && GOOGLE_DRIVE_ENABLED) {
-            $drive_result = uploadToGoogleDrive($filepath, $filename, $_SESSION['user_id'] ?? 1);
-            if ($drive_result) {
-                // Delete local file after successful upload
-                unlink($filepath);
-                return $drive_result;
-            }
-        }
-        
-        // Return local file info if Google Drive failed or disabled
-        return [
-            'id' => null,
-            'url' => $filepath
-        ];
-    }
-    
-    throw new Exception('Failed to upload file.');
+    return $payments;
 }
 ?>
