@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}Quick Billing - Amarjit Electrical Store{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Billing
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Customer Search -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <label for="phoneSearch" class="form-label">Customer Phone Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-phone"></i>
+                                </span>
+                                <input type="tel" class="form-control form-control-lg" id="phoneSearch" 
+                                       placeholder="Enter phone number to search customer" maxlength="15">
+                                <button class="btn btn-primary" type="button" onclick="searchCustomer()">
+                                    <i class="fas fa-search me-1"></i>Search
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <a href="{{ url_for('add_customer') }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-user-plus me-1"></i>Add New Customer
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Customer Info Display -->
+                    <div id="customerInfo" class="alert alert-info d-none">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5 class="alert-heading mb-1">
+                                    <i class="fas fa-user me-2"></i>
+                                    <span id="customerName"></span>
+                                </h5>
+                                <p class="mb-1">
+                                    <i class="fas fa-phone text-muted me-1"></i>
+                                    <span id="customerPhone"></span>
+                                </p>
+                                <p class="mb-0">
+                                    <i class="fas fa-map-marker-alt text-muted me-1"></i>
+                                    <span id="customerAddress"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <h4 class="mb-0">
+                                    Outstanding: <span id="customerDebt" class="text-danger">₹0.00</span>
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="row" id="quickActions" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-shopping-cart me-2"></i>Add Transaction
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="transactionForm">
+                                        <input type="hidden" id="customerId" name="customer_id">
+                                        
+                                        <div class="mb-3">
+                                            <label for="amount" class="form-label">Amount *</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">₹</span>
+                                                <input type="number" class="form-control" id="amount" name="amount" 
+                                                       step="0.01" min="0" required>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="description" class="form-label">Description</label>
+                                            <textarea class="form-control" id="description" name="description" 
+                                                      rows="2" placeholder="Items purchased..."></textarea>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="billPhoto" class="form-label">Bill Photo (Optional)</label>
+                                            <input type="file" class="form-control" id="billPhoto" name="bill_photo"
+                                                   accept="image/*" capture="environment">
+                                            <div class="form-text text-success">
+                                                <i class="fas fa-cloud-upload-alt me-1"></i>
+                                                Will be uploaded to Google Drive
+                                            </div>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-success w-100">
+                                            <i class="fas fa-plus me-2"></i>Add Transaction
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-hand-holding-usd me-2"></i>Record Payment
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="paymentForm">
+                                        <input type="hidden" id="paymentCustomerId" name="customer_id">
+                                        
+                                        <div class="mb-3">
+                                            <label for="paymentAmount" class="form-label">Payment Amount *</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">₹</span>
+                                                <input type="number" class="form-control" id="paymentAmount" name="amount" 
+                                                       step="0.01" min="0" required>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="paymentNotes" class="form-label">Notes</label>
+                                            <textarea class="form-control" id="paymentNotes" name="notes" 
+                                                      rows="2" placeholder="Payment details..."></textarea>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-info w-100">
+                                            <i class="fas fa-check me-2"></i>Record Payment
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentCustomer = null;
+
+function searchCustomer() {
+    const phone = document.getElementById('phoneSearch').value.trim();
+    
+    if (!phone) {
+        alert('Please enter a phone number');
+        return;
+    }
+    
+    fetch(`/api/search_customer?phone=${encodeURIComponent(phone)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.found) {
+                currentCustomer = data.customer;
+                displayCustomer(data.customer);
+            } else {
+                alert('Customer not found. Please add them as a new customer.');
+                document.getElementById('customerInfo').classList.add('d-none');
+                document.getElementById('quickActions').style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error searching for customer. Please try again.');
+        });
+}
+
+function displayCustomer(customer) {
+    document.getElementById('customerName').textContent = customer.name;
+    document.getElementById('customerPhone').textContent = customer.phone;
+    document.getElementById('customerAddress').textContent = customer.address || 'No address provided';
+    document.getElementById('customerDebt').textContent = `₹${customer.total_debt.toFixed(2)}`;
+    
+    // Set customer IDs in forms
+    document.getElementById('customerId').value = customer.id;
+    document.getElementById('paymentCustomerId').value = customer.id;
+    
+    // Show customer info and actions
+    document.getElementById('customerInfo').classList.remove('d-none');
+    document.getElementById('quickActions').style.display = 'block';
+}
+
+// Handle transaction form submission
+document.getElementById('transactionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!currentCustomer) {
+        alert('Please search for a customer first');
+        return;
+    }
+    
+    const formData = new FormData(this);
+    
+    fetch('/api/add_transaction', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // Update customer debt display
+            currentCustomer.total_debt = data.new_debt;
+            document.getElementById('customerDebt').textContent = `₹${data.new_debt.toFixed(2)}`;
+            // Reset form
+            document.getElementById('transactionForm').reset();
+            document.getElementById('customerId').value = currentCustomer.id;
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (error.error) {
+            alert('Error: ' + error.error);
+        } else {
+            alert('Error adding transaction. Please try again.');
+        }
+    });
+});
+
+// Handle payment form submission
+document.getElementById('paymentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!currentCustomer) {
+        alert('Please search for a customer first');
+        return;
+    }
+    
+    const formData = new FormData(this);
+    
+    fetch('/api/add_payment', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // Update customer debt display
+            currentCustomer.total_debt = data.new_debt;
+            document.getElementById('customerDebt').textContent = `₹${data.new_debt.toFixed(2)}`;
+            // Reset form
+            document.getElementById('paymentForm').reset();
+            document.getElementById('paymentCustomerId').value = currentCustomer.id;
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (error.error) {
+            alert('Error: ' + error.error);
+        } else {
+            alert('Error recording payment. Please try again.');
+        }
+    });
+});
+
+// Allow Enter key to search
+document.getElementById('phoneSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchCustomer();
+    }
+});
+</script>
+{% endblock %}
