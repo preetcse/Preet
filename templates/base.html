@@ -2,57 +2,97 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>{% block title %}Amarjit Electrical Store{% endblock %}</title>
     
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Amarjit Store">
     
     <!-- Custom CSS -->
     <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 15px;
+            --btn-radius: 25px;
         }
         
+        body {
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 80px; /* Space for mobile bottom nav */
+        }
+        
+        /* Mobile-first responsive design */
         .navbar-brand {
             font-weight: bold;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
+        }
+        
+        @media (min-width: 768px) {
+            .navbar-brand {
+                font-size: 1.5rem;
+            }
         }
         
         .main-content {
-            margin-top: 2rem;
-            margin-bottom: 2rem;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            padding: 0 15px;
+        }
+        
+        @media (min-width: 768px) {
+            .main-content {
+                margin-top: 2rem;
+                margin-bottom: 2rem;
+            }
         }
         
         .card {
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--card-shadow);
             border: none;
-            border-radius: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
         }
         
         .btn-primary {
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: var(--primary-gradient);
             border: none;
-            border-radius: 25px;
-            padding: 10px 30px;
+            border-radius: var(--btn-radius);
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        @media (min-width: 768px) {
+            .btn-primary {
+                padding: 10px 30px;
+            }
         }
         
         .btn-primary:hover {
             background: linear-gradient(45deg, #764ba2, #667eea);
+            transform: translateY(-2px);
         }
         
         .alert {
             border-radius: 10px;
+            margin-bottom: 1rem;
         }
         
         .form-control {
             border-radius: 10px;
             border: 2px solid #e9ecef;
+            font-size: 16px; /* Prevents zoom on iOS */
         }
         
         .form-control:focus {
@@ -62,30 +102,148 @@
         
         .stats-card {
             background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            padding: 1rem;
             margin-bottom: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--card-shadow);
+            text-align: center;
+        }
+        
+        @media (min-width: 768px) {
+            .stats-card {
+                padding: 1.5rem;
+            }
         }
         
         .stats-number {
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: bold;
             color: #667eea;
         }
         
+        @media (min-width: 768px) {
+            .stats-number {
+                font-size: 2rem;
+            }
+        }
+        
         .stats-label {
             color: #6c757d;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
+        }
+        
+        @media (min-width: 768px) {
+            .stats-label {
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Mobile bottom navigation */
+        .mobile-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 8px 0;
+            z-index: 1030;
+        }
+        
+        .mobile-bottom-nav .nav-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5px;
+            color: #6c757d;
+            text-decoration: none;
+            font-size: 0.7rem;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-bottom-nav .nav-link.active,
+        .mobile-bottom-nav .nav-link:hover {
+            color: #667eea;
+        }
+        
+        .mobile-bottom-nav .nav-link i {
+            font-size: 1.2rem;
+            margin-bottom: 2px;
+        }
+        
+        /* Hide mobile nav on desktop */
+        @media (min-width: 992px) {
+            .mobile-bottom-nav {
+                display: none;
+            }
+            body {
+                padding-bottom: 0;
+            }
+        }
+        
+        /* Desktop navbar improvements */
+        @media (max-width: 991px) {
+            .navbar .navbar-nav .nav-item {
+                text-align: center;
+                margin: 5px 0;
+            }
+        }
+        
+        /* Responsive tables */
+        .table-responsive {
+            border-radius: 10px;
+        }
+        
+        /* Touch-friendly buttons */
+        .btn {
+            min-height: 44px; /* iOS touch target minimum */
+            border-radius: 10px;
+        }
+        
+        .btn-sm {
+            min-height: 32px;
+            padding: 4px 12px;
+        }
+        
+        /* Quick action buttons for mobile */
+        .quick-actions {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            z-index: 1020;
+        }
+        
+        .quick-actions .btn {
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        @media (min-width: 992px) {
+            .quick-actions {
+                display: none;
+            }
+        }
+        
+        /* Loading spinner */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
         }
     </style>
     
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- Navigation -->
+    <!-- Desktop Navigation -->
     {% if session.user_id %}
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(0,0,0,0.1);">
+    <nav class="navbar navbar-expand-lg navbar-dark d-lg-block d-none" style="background: rgba(0,0,0,0.1);">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-bolt me-2"></i>Amarjit Electrical Store
@@ -145,6 +303,79 @@
             </div>
         </div>
     </nav>
+    
+    <!-- Mobile Top Bar -->
+    <nav class="navbar navbar-dark d-lg-none" style="background: rgba(0,0,0,0.1);">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-bolt me-2"></i>Amarjit Store
+            </a>
+            
+            <div class="d-flex align-items-center">
+                {% if not session.google_credentials %}
+                <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('google_auth') }}">
+                    <i class="fab fa-google-drive"></i>
+                </a>
+                {% else %}
+                <span class="text-success me-2">
+                    <i class="fab fa-google-drive"></i>
+                </span>
+                {% endif %}
+                
+                <div class="dropdown">
+                    <button class="btn btn-outline-light btn-sm" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><span class="dropdown-item-text">{{ session.username }}</span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav d-lg-none">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a href="{{ url_for('customers') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>Customers</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a href="{{ url_for('quick_billing') }}" class="nav-link">
+                        <i class="fas fa-cash-register"></i>
+                        <span>Billing</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a href="{{ url_for('reports') }}" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Reports</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Quick Action Buttons (Mobile) -->
+    <div class="quick-actions d-lg-none">
+        <a href="{{ url_for('add_customer') }}" class="btn btn-primary btn-sm rounded-circle" title="Add Customer">
+            <i class="fas fa-user-plus"></i>
+        </a>
+    </div>
     {% endif %}
     
     <!-- Main Content -->
@@ -166,7 +397,55 @@
     </div>
     
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Mobile Navigation Active State -->
+    <script>
+        // Set active navigation item
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.mobile-bottom-nav .nav-link');
+            
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+            
+            // Mobile touch feedback
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(button => {
+                button.addEventListener('touchstart', function() {
+                    this.style.transform = 'scale(0.95)';
+                });
+                
+                button.addEventListener('touchend', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+        });
+        
+        // Loading states for forms
+        function showLoading(formId) {
+            const form = document.getElementById(formId);
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+                submitBtn.disabled = true;
+            }
+        }
+        
+        // Auto-hide flash messages
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                if (alert.classList.contains('show')) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            });
+        }, 5000);
+    </script>
     
     <!-- Custom JS -->
     {% block extra_js %}{% endblock %}
