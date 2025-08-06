@@ -379,9 +379,23 @@ def add_transaction():
         if 'bill_photo' in request.files:
             file = request.files['bill_photo']
             if file and file.filename:
+                # Check if Google Drive is connected
+                if 'google_credentials' not in session:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Google Drive not connected. Please connect Google Drive first to upload photos.',
+                        'redirect': '/google_auth'
+                    }), 400
+                
                 filename = secure_filename(f"{customer.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
                 file_data = file.read()
                 bill_photo_url = upload_to_google_drive(file_data, filename, customer.name)
+                
+                if not bill_photo_url:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Failed to upload photo to Google Drive. Please try again.',
+                    }), 500
         
         # Create transaction
         transaction = Transaction(

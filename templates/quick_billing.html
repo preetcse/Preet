@@ -265,7 +265,12 @@ document.getElementById('transactionForm').addEventListener('submit', function(e
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             alert(data.message);
@@ -280,7 +285,17 @@ document.getElementById('transactionForm').addEventListener('submit', function(e
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error adding transaction');
+        if (error.error) {
+            alert('Error: ' + error.error);
+            // If it's a Google Drive connection error, offer to redirect
+            if (error.redirect) {
+                if (confirm('Would you like to connect Google Drive now?')) {
+                    window.location.href = error.redirect;
+                }
+            }
+        } else {
+            alert('Error adding transaction. Please try again.');
+        }
     });
 });
 
