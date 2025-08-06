@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Amarjit Electrical Store{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="text-white mb-0">
+            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+        </h1>
+        <p class="text-white-50">Overview of your electrical store</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number">{{ total_customers }}</div>
+                    <div class="stats-label">Total Customers</div>
+                </div>
+                <div class="text-primary">
+                    <i class="fas fa-users fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-danger">₹{{ "%.2f"|format(total_debt) }}</div>
+                    <div class="stats-label">Total Outstanding</div>
+                </div>
+                <div class="text-danger">
+                    <i class="fas fa-rupee-sign fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-success">{{ recent_payments|length }}</div>
+                    <div class="stats-label">Recent Payments</div>
+                </div>
+                <div class="text-success">
+                    <i class="fas fa-hand-holding-usd fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-lightning-bolt me-2"></i>Quick Actions
+                </h5>
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('add_customer') }}" class="btn btn-primary w-100">
+                            <i class="fas fa-user-plus me-2"></i>Add Customer
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('quick_billing') }}" class="btn btn-success w-100">
+                            <i class="fas fa-cash-register me-2"></i>Quick Billing
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('customers') }}" class="btn btn-info w-100">
+                            <i class="fas fa-search me-2"></i>Find Customer
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('reports') }}" class="btn btn-warning w-100">
+                            <i class="fas fa-chart-line me-2"></i>View Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-shopping-cart me-2"></i>Recent Transactions
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_transactions %}
+                    {% for transaction in recent_transactions %}
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <strong>{{ transaction.customer.name }}</strong><br>
+                            <small class="text-muted">{{ transaction.description[:30] }}...</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="fw-bold text-danger">₹{{ "%.2f"|format(transaction.amount) }}</span><br>
+                            <small class="text-muted">{{ transaction.created_at.strftime('%d %b') }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">No recent transactions</p>
+                {% endif %}
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('quick_billing') }}" class="btn btn-sm btn-outline-primary">
+                        Add New Transaction
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Recent Payments
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_payments %}
+                    {% for payment in recent_payments %}
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <strong>{{ payment.customer.name }}</strong><br>
+                            <small class="text-muted">{{ payment.notes[:30] if payment.notes else 'Payment received' }}...</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="fw-bold text-success">₹{{ "%.2f"|format(payment.amount) }}</span><br>
+                            <small class="text-muted">{{ payment.created_at.strftime('%d %b') }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">No recent payments</p>
+                {% endif %}
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('quick_billing') }}" class="btn btn-sm btn-outline-success">
+                        Record Payment
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Google Drive Status -->
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-body text-center">
+                {% if session.google_credentials %}
+                    <i class="fab fa-google-drive fa-3x text-success mb-3"></i>
+                    <h5 class="text-success">Google Drive Connected</h5>
+                    <p class="text-muted">Bill photos will be automatically uploaded to your Google Drive</p>
+                {% else %}
+                    <i class="fab fa-google-drive fa-3x text-warning mb-3"></i>
+                    <h5 class="text-warning">Google Drive Not Connected</h5>
+                    <p class="text-muted">Connect Google Drive to automatically backup bill photos</p>
+                    <a href="{{ url_for('google_auth') }}" class="btn btn-primary">
+                        <i class="fab fa-google-drive me-2"></i>Connect Google Drive
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
