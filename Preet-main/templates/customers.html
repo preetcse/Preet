@@ -57,7 +57,7 @@
                                 ₹{{ "%.2f"|format(customer.total_debt) }}
                             </span>
                         </td>
-                        <td>{{ customer.created_date.strftime('%d/%m/%Y') }}</td>
+                                                    <td>{{ customer.created_at.strftime('%d/%m/%Y') }}</td>
                         <td>
                             <div class="btn-group" role="group">
                                 <a href="{{ url_for('customer_detail', id=customer.id) }}" class="btn btn-sm btn-outline-primary">
