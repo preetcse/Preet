@@ -17,6 +17,10 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Allow insecure transport for local development
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, make_response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -548,7 +552,9 @@ def google_callback():
         
     except Exception as e:
         logger.error(f"Error in Google callback: {str(e)}")
-        flash('Error connecting to Google Drive', 'error')
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        flash(f'Error connecting to Google Drive: {str(e)}', 'error')
         return redirect(url_for('index'))
 
 @app.route('/reports')
