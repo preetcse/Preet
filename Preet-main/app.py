@@ -467,7 +467,7 @@ def index():
     recent_transactions = sorted(transactions, key=lambda x: x['created_at'], reverse=True)[:5]
     recent_payments = sorted(payments, key=lambda x: x['created_at'], reverse=True)[:5]
     
-    return render_template('dashboard_cloud.html',
+    return render_template('dashboard.html',
                          total_customers=total_customers,
                          total_debt=total_debt,
                          recent_transactions=recent_transactions,
@@ -499,7 +499,7 @@ def login():
         else:
             flash('Invalid username or password', 'error')
     
-    return render_template('login_cloud.html')
+    return render_template('login.html')
 
 @app.route('/setup', methods=['GET', 'POST'])
 def setup():
@@ -522,7 +522,7 @@ def setup():
         else:
             flash('Failed to create admin user. Please try again.', 'error')
     
-    return render_template('setup_cloud.html')
+    return render_template('setup.html')
 
 @app.route('/logout')
 def logout():
@@ -626,14 +626,14 @@ def add_customer():
         else:
             flash(result, 'error')
     
-    return render_template('add_customer_cloud.html')
+    return render_template('add_customer.html')
 
 @app.route('/quick_billing')
 @login_required
 @google_drive_required
 def quick_billing():
     """Quick billing page"""
-    return render_template('quick_billing_cloud.html')
+    return render_template('quick_billing.html')
 
 @app.route('/api/search_customer')
 @login_required
@@ -768,7 +768,7 @@ def customers():
                     search.lower() in c['name'].lower() or 
                     search.lower() in c['phone'].lower()]
     
-    return render_template('customers_cloud.html', customers=customers, search=search)
+    return render_template('customers.html', customers=customers, search=search)
 
 @app.route('/customer/<int:customer_id>')
 @login_required
@@ -783,7 +783,7 @@ def customer_detail(customer_id):
     transactions = cloud_data.get_customer_transactions(customer_id)
     payments = cloud_data.get_customer_payments(customer_id)
     
-    return render_template('customer_detail_cloud.html',
+    return render_template('customer_detail.html',
                          customer=customer,
                          transactions=transactions,
                          payments=payments)
@@ -811,7 +811,7 @@ def edit_customer(customer_id):
         else:
             flash(result, 'error')
     
-    return render_template('edit_customer_cloud.html', customer=customer)
+    return render_template('edit_customer.html', customer=customer)
 
 @app.route('/customer/<int:customer_id>/delete', methods=['POST'])
 @login_required
@@ -864,7 +864,7 @@ def reports():
     recent_transactions = sorted(transactions, key=lambda x: x['created_at'], reverse=True)[:10]
     recent_payments = sorted(payments, key=lambda x: x['created_at'], reverse=True)[:10]
     
-    return render_template('reports_cloud.html',
+    return render_template('reports.html',
                          total_customers=total_customers,
                          total_transactions=total_transactions,
                          total_payments=total_payments,
