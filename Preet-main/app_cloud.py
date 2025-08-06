@@ -606,38 +606,7 @@ def google_callback():
         flash(f'Error connecting to Google Drive: {str(e)}', 'error')
         return redirect(url_for('login'))
 
-@app.route('/customers')
-@login_required
-@google_drive_required
-def customers():
-    """Customers listing page"""
-    search = request.args.get('search', '')
-    customers = cloud_data.get_customers()
-    
-    if search:
-        customers = [c for c in customers if 
-                    search.lower() in c['name'].lower() or 
-                    search.lower() in c['phone'].lower()]
-    
-    return render_template('customers_cloud.html', customers=customers, search=search)
 
-@app.route('/customer/<int:customer_id>')
-@login_required
-@google_drive_required
-def customer_detail(customer_id):
-    """Customer detail page"""
-    customer = cloud_data.get_customer_by_id(customer_id)
-    if not customer:
-        flash('Customer not found', 'error')
-        return redirect(url_for('customers'))
-    
-    transactions = cloud_data.get_customer_transactions(customer_id)
-    payments = cloud_data.get_customer_payments(customer_id)
-    
-    return render_template('customer_detail_cloud.html',
-                         customer=customer,
-                         transactions=transactions,
-                         payments=payments)
 
 @app.route('/add_customer', methods=['GET', 'POST'])
 @login_required
@@ -784,6 +753,199 @@ def data_status():
     }
     
     return render_template('data_status.html', status=status)
+
+# Add missing routes for full functionality
+@app.route('/customers')
+@login_required
+@google_drive_required  
+def customers():
+    """Customers listing page"""
+    search = request.args.get('search', '')
+    customers = cloud_data.get_customers()
+    
+    if search:
+        customers = [c for c in customers if 
+                    search.lower() in c['name'].lower() or 
+                    search.lower() in c['phone'].lower()]
+    
+    return render_template('customers_cloud.html', customers=customers, search=search)
+
+@app.route('/customer/<int:customer_id>')
+@login_required
+@google_drive_required
+def customer_detail(customer_id):
+    """Customer detail page"""
+    customer = cloud_data.get_customer_by_id(customer_id)
+    if not customer:
+        flash('Customer not found', 'error')
+        return redirect(url_for('customers'))
+    
+    transactions = cloud_data.get_customer_transactions(customer_id)
+    payments = cloud_data.get_customer_payments(customer_id)
+    
+    return render_template('customer_detail_cloud.html',
+                         customer=customer,
+                         transactions=transactions,
+                         payments=payments)
+
+@app.route('/customer/<int:customer_id>/edit', methods=['GET', 'POST'])
+@login_required
+@google_drive_required
+def edit_customer(customer_id):
+    """Edit customer"""
+    customer = cloud_data.get_customer_by_id(customer_id)
+    if not customer:
+        flash('Customer not found', 'error')
+        return redirect(url_for('customers'))
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        phone = request.form['phone']
+        address = request.form['address']
+        
+        success, result = cloud_data.update_customer(customer_id, name, phone, address)
+        
+        if success:
+            flash(f'Customer {name} updated successfully!', 'success')
+            return redirect(url_for('customer_detail', customer_id=customer_id))
+        else:
+            flash(result, 'error')
+    
+    return render_template('edit_customer_cloud.html', customer=customer)
+
+@app.route('/customer/<int:customer_id>/delete', methods=['POST'])
+@login_required
+@google_drive_required
+def delete_customer(customer_id):
+    """Delete customer"""
+    customer = cloud_data.get_customer_by_id(customer_id)
+    if not customer:
+        flash('Customer not found', 'error')
+        return redirect(url_for('customers'))
+    
+    # Delete customer
+    customers = cloud_data.get_customers()
+    customers = [c for c in customers if c['id'] != customer_id]
+    
+    # Delete related transactions and payments
+    transactions = cloud_data.get_transactions()
+    transactions = [t for t in transactions if t['customer_id'] != customer_id]
+    
+    payments = cloud_data.get_payments()
+    payments = [p for p in payments if p['customer_id'] != customer_id]
+    
+    # Save updated data
+    cloud_data.save_customers(customers)
+    cloud_data.save_transactions(transactions) 
+    cloud_data.save_payments(payments)
+    
+    flash(f'Customer {customer["name"]} deleted successfully!', 'success')
+    return redirect(url_for('customers'))
+
+@app.route('/reports')
+@login_required
+@google_drive_required
+def reports():
+    """Reports page"""
+    # Get all data
+    customers = cloud_data.get_customers()
+    transactions = cloud_data.get_transactions()
+    payments = cloud_data.get_payments()
+    
+    # Calculate statistics
+    total_customers = len(customers)
+    total_transactions = len(transactions)
+    total_payments = len(payments)
+    total_debt = sum(c['total_debt'] for c in customers)
+    total_sales = sum(t['amount'] for t in transactions)
+    total_received = sum(p['amount'] for p in payments)
+    
+    # Recent data
+    recent_transactions = sorted(transactions, key=lambda x: x['created_at'], reverse=True)[:10]
+    recent_payments = sorted(payments, key=lambda x: x['created_at'], reverse=True)[:10]
+    
+    return render_template('reports_cloud.html',
+                         total_customers=total_customers,
+                         total_transactions=total_transactions,
+                         total_payments=total_payments,
+                         total_debt=total_debt,
+                         total_sales=total_sales,
+                         total_received=total_received,
+                         recent_transactions=recent_transactions,
+                         recent_payments=recent_payments,
+                         customers=customers)
+
+@app.route('/export/customers')
+@login_required
+@google_drive_required
+def export_customers():
+    """Export customers to CSV"""
+    import csv
+    import io
+    
+    customers = cloud_data.get_customers()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(['ID', 'Name', 'Phone', 'Address', 'Total Debt', 'Created At'])
+    
+    # Data
+    for customer in customers:
+        writer.writerow([
+            customer['id'],
+            customer['name'],
+            customer['phone'],
+            customer['address'],
+            customer['total_debt'],
+            customer['created_at'][:10]  # Date only
+        ])
+    
+    output.seek(0)
+    
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=customers_{datetime.now().strftime("%Y%m%d")}.csv'
+    
+    return response
+
+@app.route('/export/transactions') 
+@login_required
+@google_drive_required
+def export_transactions():
+    """Export transactions to CSV"""
+    import csv
+    import io
+    
+    transactions = cloud_data.get_transactions()
+    customers = cloud_data.get_customers()
+    customer_dict = {c['id']: c['name'] for c in customers}
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(['ID', 'Customer Name', 'Amount', 'Description', 'Transaction Date', 'Has Photo'])
+    
+    # Data
+    for transaction in transactions:
+        writer.writerow([
+            transaction['id'],
+            customer_dict.get(transaction['customer_id'], 'Unknown'),
+            transaction['amount'],
+            transaction['description'],
+            transaction['transaction_date'][:10],  # Date only
+            'Yes' if transaction.get('bill_photo_url') else 'No'
+        ])
+    
+    output.seek(0)
+    
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=transactions_{datetime.now().strftime("%Y%m%d")}.csv'
+    
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
