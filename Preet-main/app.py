@@ -13,6 +13,10 @@ from decimal import Decimal
 from functools import wraps
 
 import requests
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, make_response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -215,6 +219,10 @@ def create_or_get_folder(service, folder_name, parent_folder_id=None):
 @app.route('/')
 def index():
     """Dashboard page"""
+    # Check if setup is needed first
+    if User.query.count() == 0:
+        return redirect(url_for('setup'))
+    
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
@@ -233,6 +241,10 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page"""
+    # Check if setup is needed first
+    if User.query.count() == 0:
+        return redirect(url_for('setup'))
+    
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
