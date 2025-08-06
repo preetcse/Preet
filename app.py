@@ -559,6 +559,241 @@ def reports():
                          start_date=start_date,
                          end_date=end_date)
 
+@app.route('/customer/<int:customer_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_customer(customer_id):
+    """Edit customer information"""
+    customer = Customer.query.get_or_404(customer_id)
+    
+    if request.method == 'POST':
+        try:
+            customer.name = request.form.get('name', '').strip()
+            customer.phone = request.form.get('phone', '').strip()
+            customer.address = request.form.get('address', '').strip()
+            
+            if not customer.name or not customer.phone:
+                flash('Name and phone are required', 'error')
+                return render_template('edit_customer.html', customer=customer)
+            
+            db.session.commit()
+            flash(f'Customer {customer.name} updated successfully!', 'success')
+            return redirect(url_for('customer_detail', customer_id=customer.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error updating customer: {str(e)}")
+            flash('Error updating customer', 'error')
+    
+    return render_template('edit_customer.html', customer=customer)
+
+@app.route('/customer/<int:customer_id>/delete', methods=['POST'])
+@login_required
+def delete_customer(customer_id):
+    """Delete customer and all related data"""
+    customer = Customer.query.get_or_404(customer_id)
+    
+    try:
+        # Delete related transactions and payments
+        Transaction.query.filter_by(customer_id=customer_id).delete()
+        Payment.query.filter_by(customer_id=customer_id).delete()
+        
+        # Delete customer
+        db.session.delete(customer)
+        db.session.commit()
+        
+        flash(f'Customer {customer.name} and all related data deleted successfully!', 'success')
+        return redirect(url_for('customers'))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting customer: {str(e)}")
+        flash('Error deleting customer', 'error')
+        return redirect(url_for('customer_detail', customer_id=customer_id))
+
+@app.route('/transaction/<int:transaction_id>/return', methods=['POST'])
+@login_required
+def return_transaction(transaction_id):
+    """Handle product returns"""
+    transaction = Transaction.query.get_or_404(transaction_id)
+    
+    try:
+        return_amount = float(request.form.get('return_amount', 0))
+        return_notes = request.form.get('return_notes', '').strip()
+        
+        if return_amount <= 0 or return_amount > float(transaction.amount):
+            return jsonify({'success': False, 'message': 'Invalid return amount'})
+        
+        # Create a return transaction (negative amount)
+        return_transaction = Transaction(
+            customer_id=transaction.customer_id,
+            amount=-return_amount,  # Negative for return
+            description=f"RETURN: {transaction.description} - {return_notes}",
+            transaction_date=datetime.now(),
+            bill_photo_url=None
+        )
+        
+        db.session.add(return_transaction)
+        
+        # Update customer debt
+        customer = transaction.customer
+        customer.total_debt = float(customer.total_debt) - return_amount
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Return of ₹{return_amount:.2f} processed successfully',
+            'new_debt': customer.total_debt
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error processing return: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error processing return'})
+
+@app.route('/transaction/<int:transaction_id>/delete', methods=['POST'])
+@login_required
+def delete_transaction(transaction_id):
+    """Delete a transaction"""
+    transaction = Transaction.query.get_or_404(transaction_id)
+    customer = transaction.customer
+    
+    try:
+        # Adjust customer debt
+        customer.total_debt = float(customer.total_debt) - float(transaction.amount)
+        
+        # Delete transaction
+        db.session.delete(transaction)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Transaction deleted successfully',
+            'new_debt': customer.total_debt
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting transaction: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error deleting transaction'})
+
+@app.route('/export/customers')
+@login_required
+def export_customers():
+    """Export customers data as CSV"""
+    import csv
+    from io import StringIO
+    from flask import make_response
+    
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write headers
+    writer.writerow(['Name', 'Phone', 'Address', 'Total Debt', 'Created Date'])
+    
+    # Write customer data
+    customers = Customer.query.all()
+    for customer in customers:
+        writer.writerow([
+            customer.name,
+            customer.phone,
+            customer.address or '',
+            f"{customer.total_debt:.2f}",
+            customer.created_at.strftime('%Y-%m-%d')
+        ])
+    
+    # Create response
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=customers_export.csv"
+    response.headers["Content-type"] = "text/csv"
+    
+    return response
+
+@app.route('/export/transactions')
+@login_required
+def export_transactions():
+    """Export transactions data as CSV"""
+    import csv
+    from io import StringIO
+    from flask import make_response
+    
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write headers
+    writer.writerow(['Date', 'Customer Name', 'Customer Phone', 'Amount', 'Description', 'Bill Photo URL'])
+    
+    # Write transaction data
+    transactions = Transaction.query.join(Customer).all()
+    for transaction in transactions:
+        writer.writerow([
+            transaction.transaction_date.strftime('%Y-%m-%d %H:%M'),
+            transaction.customer.name,
+            transaction.customer.phone,
+            f"{transaction.amount:.2f}",
+            transaction.description or '',
+            transaction.bill_photo_url or ''
+        ])
+    
+    # Create response
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=transactions_export.csv"
+    response.headers["Content-type"] = "text/csv"
+    
+    return response
+
+@app.route('/api/search', methods=['GET'])
+@login_required
+def advanced_search():
+    """Advanced search across customers and transactions"""
+    query = request.args.get('q', '').strip()
+    search_type = request.args.get('type', 'all')  # all, customers, transactions
+    
+    results = {
+        'customers': [],
+        'transactions': []
+    }
+    
+    if query:
+        if search_type in ['all', 'customers']:
+            # Search customers
+            customers = Customer.query.filter(
+                db.or_(
+                    Customer.name.ilike(f'%{query}%'),
+                    Customer.phone.ilike(f'%{query}%'),
+                    Customer.address.ilike(f'%{query}%')
+                )
+            ).limit(10).all()
+            
+            results['customers'] = [{
+                'id': c.id,
+                'name': c.name,
+                'phone': c.phone,
+                'debt': float(c.total_debt),
+                'url': url_for('customer_detail', customer_id=c.id)
+            } for c in customers]
+        
+        if search_type in ['all', 'transactions']:
+            # Search transactions
+            transactions = Transaction.query.join(Customer).filter(
+                db.or_(
+                    Transaction.description.ilike(f'%{query}%'),
+                    Customer.name.ilike(f'%{query}%'),
+                    Customer.phone.ilike(f'%{query}%')
+                )
+            ).limit(10).all()
+            
+            results['transactions'] = [{
+                'id': t.id,
+                'customer_name': t.customer.name,
+                'amount': float(t.amount),
+                'description': t.description,
+                'date': t.transaction_date.strftime('%Y-%m-%d'),
+                'customer_url': url_for('customer_detail', customer_id=t.customer_id)
+            } for t in transactions]
+    
+    return jsonify(results)
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
