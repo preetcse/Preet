@@ -169,13 +169,43 @@
         <div class="card">
             <div class="card-body text-center">
                 {% if session.google_credentials %}
-                    <i class="fab fa-google-drive fa-3x text-success mb-3"></i>
-                    <h5 class="text-success">Google Drive Connected</h5>
-                    <p class="text-muted">Bill photos will be automatically uploaded to your Google Drive</p>
+                    <div class="row">
+                        <div class="col-md-6 text-center">
+                            <i class="fab fa-google-drive fa-3x text-success mb-3"></i>
+                            <h5 class="text-success">Google Drive Connected</h5>
+                            <p class="text-muted">All data is automatically synced to Google Drive</p>
+                            <div id="syncStatus" class="mb-3">
+                                <small class="text-muted">Checking sync status...</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Data Sync Options</h6>
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('backup_to_drive') }}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-cloud-upload-alt me-2"></i>Manual Backup
+                                </a>
+                                <a href="{{ url_for('restore_from_drive') }}" class="btn btn-warning btn-sm" 
+                                   onclick="return confirm('This will replace all local data with Google Drive data. Continue?')">
+                                    <i class="fas fa-cloud-download-alt me-2"></i>Restore from Drive
+                                </a>
+                            </div>
+                            <div class="mt-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="autoSync" checked>
+                                    <label class="form-check-label" for="autoSync">
+                                        <small>Auto-sync enabled</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 {% else %}
                     <i class="fab fa-google-drive fa-3x text-warning mb-3"></i>
                     <h5 class="text-warning">Google Drive Not Connected</h5>
-                    <p class="text-muted">Connect Google Drive to automatically backup bill photos</p>
+                    <p class="text-muted">Connect Google Drive to sync all your data across devices</p>
+                    <div class="alert alert-info">
+                        <strong>Cross-Device Sync:</strong> When connected, all customer data, transactions, and payments will be automatically backed up to Google Drive and synced across all your devices.
+                    </div>
                     <a href="{{ url_for('google_auth') }}" class="btn btn-primary">
                         <i class="fab fa-google-drive me-2"></i>Connect Google Drive
                     </a>
@@ -183,5 +213,124 @@
             </div>
         </div>
     </div>
-</div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Check sync status
+function checkSyncStatus() {
+    {% if session.google_credentials %}
+    fetch('/sync/status')
+        .then(response => response.json())
+        .then(data => {
+            const statusDiv = document.getElementById('syncStatus');
+            if (data.connected) {
+                if (data.last_backup) {
+                    const backupDate = new Date(data.last_backup);
+                    const now = new Date();
+                    const diffMinutes = Math.floor((now - backupDate) / (1000 * 60));
+                    
+                    let timeText;
+                    if (diffMinutes < 1) {
+                        timeText = 'just now';
+                    } else if (diffMinutes < 60) {
+                        timeText = `${diffMinutes} minutes ago`;
+                    } else if (diffMinutes < 1440) {
+                        timeText = `${Math.floor(diffMinutes / 60)} hours ago`;
+                    } else {
+                        timeText = `${Math.floor(diffMinutes / 1440)} days ago`;
+                    }
+                    
+                    statusDiv.innerHTML = `
+                        <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>Last sync: ${timeText}
+                        </span>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <span class="badge bg-warning">
+                            <i class="fas fa-clock me-1"></i>No backup found
+                        </span>
+                    `;
+                }
+            } else {
+                statusDiv.innerHTML = `
+                    <span class="badge bg-danger">
+                        <i class="fas fa-times me-1"></i>Sync unavailable
+                    </span>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error checking sync status:', error);
+            document.getElementById('syncStatus').innerHTML = `
+                <span class="badge bg-secondary">
+                    <i class="fas fa-question me-1"></i>Status unknown
+                </span>
+            `;
+        });
+    {% endif %}
+}
+
+// Auto-sync functionality
+let autoSyncEnabled = true;
+document.addEventListener('DOMContentLoaded', function() {
+    // Check initial sync status
+    checkSyncStatus();
+    
+    // Update sync status every 30 seconds
+    setInterval(checkSyncStatus, 30000);
+    
+    // Handle auto-sync toggle
+    const autoSyncToggle = document.getElementById('autoSync');
+    if (autoSyncToggle) {
+        autoSyncToggle.addEventListener('change', function() {
+            autoSyncEnabled = this.checked;
+            if (this.checked) {
+                console.log('Auto-sync enabled');
+            } else {
+                console.log('Auto-sync disabled');
+            }
+        });
+    }
+});
+
+// Show sync notification
+function showSyncNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    notification.innerHTML = `
+        <i class="fas fa-cloud me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Global sync function for use in other pages
+window.triggerManualSync = function() {
+    fetch('/sync/backup')
+        .then(response => {
+            if (response.ok) {
+                showSyncNotification('Data synced to Google Drive successfully!', 'success');
+                checkSyncStatus();
+            } else {
+                showSyncNotification('Sync failed. Please try again.', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Sync error:', error);
+            showSyncNotification('Sync failed. Please check your connection.', 'danger');
+        });
+};
+</script>
 {% endblock %}

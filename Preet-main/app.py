@@ -327,6 +327,9 @@ def add_customer():
         db.session.add(customer)
         db.session.commit()
         
+        # Auto-sync to Google Drive
+        auto_sync_data()
+        
         flash(f'Customer {name} added successfully!', 'success')
         return redirect(url_for('customer_detail', customer_id=customer.id))
     
@@ -412,6 +415,9 @@ def add_transaction():
         db.session.add(transaction)
         db.session.commit()
         
+        # Auto-sync to Google Drive
+        auto_sync_data()
+        
         return jsonify({
             'success': True,
             'message': 'Transaction added successfully',
@@ -448,6 +454,9 @@ def add_payment():
         
         db.session.add(payment)
         db.session.commit()
+        
+        # Auto-sync to Google Drive
+        auto_sync_data()
         
         return jsonify({
             'success': True,
@@ -815,6 +824,251 @@ def advanced_search():
             } for t in transactions]
     
     return jsonify(results)
+
+# Google Drive Data Sync Functions
+def sync_data_to_drive():
+    """Sync all customer data to Google Drive as JSON"""
+    try:
+        service = get_google_drive_service()
+        if not service:
+            return False
+        
+        # Get all data
+        customers_data = []
+        customers = Customer.query.all()
+        
+        for customer in customers:
+            customer_data = {
+                'id': customer.id,
+                'name': customer.name,
+                'phone': customer.phone,
+                'address': customer.address,
+                'total_debt': float(customer.total_debt),
+                'created_at': customer.created_at.isoformat(),
+                'updated_at': customer.updated_at.isoformat(),
+                'transactions': [],
+                'payments': []
+            }
+            
+            # Add transactions
+            transactions = Transaction.query.filter_by(customer_id=customer.id).all()
+            for transaction in transactions:
+                customer_data['transactions'].append({
+                    'id': transaction.id,
+                    'amount': float(transaction.amount),
+                    'description': transaction.description,
+                    'transaction_date': transaction.transaction_date.isoformat(),
+                    'created_at': transaction.created_at.isoformat(),
+                    'bill_photo_url': transaction.bill_photo_url
+                })
+            
+            # Add payments
+            payments = Payment.query.filter_by(customer_id=customer.id).all()
+            for payment in payments:
+                customer_data['payments'].append({
+                    'id': payment.id,
+                    'amount': float(payment.amount),
+                    'notes': payment.notes,
+                    'payment_date': payment.payment_date.isoformat(),
+                    'created_at': payment.created_at.isoformat()
+                })
+            
+            customers_data.append(customer_data)
+        
+        # Create backup data
+        backup_data = {
+            'backup_date': datetime.now().isoformat(),
+            'version': '1.0',
+            'customers': customers_data
+        }
+        
+        # Upload to Google Drive
+        main_folder = create_or_get_folder(service, "Amarjit Electrical Store")
+        data_folder = create_or_get_folder(service, "Data Backup", main_folder)
+        
+        filename = f"amarjit_store_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        file_data = json.dumps(backup_data, indent=2).encode('utf-8')
+        
+        file_metadata = {
+            'name': filename,
+            'parents': [data_folder]
+        }
+        
+        media = MediaIoBaseUpload(io.BytesIO(file_data), mimetype='application/json')
+        file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id,webViewLink'
+        ).execute()
+        
+        # Also create/update a "latest_backup.json" file
+        latest_metadata = {
+            'name': 'latest_backup.json',
+            'parents': [data_folder]
+        }
+        
+        # Check if latest backup exists and update it
+        try:
+            existing_files = service.files().list(
+                q=f"name='latest_backup.json' and parents in '{data_folder}'"
+            ).execute()
+            
+            if existing_files['files']:
+                # Update existing file
+                service.files().update(
+                    fileId=existing_files['files'][0]['id'],
+                    media_body=media
+                ).execute()
+            else:
+                # Create new file
+                service.files().create(
+                    body=latest_metadata,
+                    media_body=MediaIoBaseUpload(io.BytesIO(file_data), mimetype='application/json')
+                ).execute()
+        except Exception as e:
+            logger.error(f"Error updating latest backup: {str(e)}")
+        
+        logger.info(f"Data synced to Google Drive: {filename}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error syncing data to Google Drive: {str(e)}")
+        return False
+
+def restore_data_from_drive():
+    """Restore data from Google Drive"""
+    try:
+        service = get_google_drive_service()
+        if not service:
+            return False, "Google Drive not connected"
+        
+        # Find the data backup folder
+        main_folder = create_or_get_folder(service, "Amarjit Electrical Store")
+        data_folder = create_or_get_folder(service, "Data Backup", main_folder)
+        
+        # Look for latest backup
+        files = service.files().list(
+            q=f"name='latest_backup.json' and parents in '{data_folder}'"
+        ).execute()
+        
+        if not files['files']:
+            return False, "No backup found"
+        
+        file_id = files['files'][0]['id']
+        
+        # Download the file
+        file_content = service.files().get_media(fileId=file_id).execute()
+        backup_data = json.loads(file_content.decode('utf-8'))
+        
+        # Clear existing data
+        db.session.query(Payment).delete()
+        db.session.query(Transaction).delete()
+        db.session.query(Customer).delete()
+        
+        # Restore customers
+        for customer_data in backup_data['customers']:
+            customer = Customer(
+                name=customer_data['name'],
+                phone=customer_data['phone'],
+                address=customer_data['address'],
+                total_debt=customer_data['total_debt']
+            )
+            customer.created_at = datetime.fromisoformat(customer_data['created_at'])
+            customer.updated_at = datetime.fromisoformat(customer_data['updated_at'])
+            
+            db.session.add(customer)
+            db.session.flush()  # Get the ID
+            
+            # Restore transactions
+            for trans_data in customer_data['transactions']:
+                transaction = Transaction(
+                    customer_id=customer.id,
+                    amount=trans_data['amount'],
+                    description=trans_data['description'],
+                    bill_photo_url=trans_data['bill_photo_url']
+                )
+                transaction.transaction_date = datetime.fromisoformat(trans_data['transaction_date'])
+                transaction.created_at = datetime.fromisoformat(trans_data['created_at'])
+                db.session.add(transaction)
+            
+            # Restore payments
+            for pay_data in customer_data['payments']:
+                payment = Payment(
+                    customer_id=customer.id,
+                    amount=pay_data['amount'],
+                    notes=pay_data['notes']
+                )
+                payment.payment_date = datetime.fromisoformat(pay_data['payment_date'])
+                payment.created_at = datetime.fromisoformat(pay_data['created_at'])
+                db.session.add(payment)
+        
+        db.session.commit()
+        logger.info("Data restored from Google Drive successfully")
+        return True, "Data restored successfully"
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error restoring data from Google Drive: {str(e)}")
+        return False, f"Error restoring data: {str(e)}"
+
+def auto_sync_data():
+    """Automatically sync data after any database change"""
+    try:
+        if 'google_credentials' in session:
+            sync_data_to_drive()
+    except Exception as e:
+        logger.error(f"Auto sync failed: {str(e)}")
+
+@app.route('/sync/backup')
+@login_required
+def backup_to_drive():
+    """Manual backup to Google Drive"""
+    if sync_data_to_drive():
+        flash('Data backed up to Google Drive successfully!', 'success')
+    else:
+        flash('Failed to backup data to Google Drive', 'error')
+    return redirect(url_for('index'))
+
+@app.route('/sync/restore')
+@login_required
+def restore_from_drive():
+    """Manual restore from Google Drive"""
+    success, message = restore_data_from_drive()
+    if success:
+        flash(message, 'success')
+    else:
+        flash(message, 'error')
+    return redirect(url_for('index'))
+
+@app.route('/sync/status')
+@login_required
+def sync_status():
+    """Check sync status"""
+    try:
+        service = get_google_drive_service()
+        if not service:
+            return jsonify({'connected': False, 'last_backup': None})
+        
+        # Check for latest backup
+        main_folder = create_or_get_folder(service, "Amarjit Electrical Store")
+        data_folder = create_or_get_folder(service, "Data Backup", main_folder)
+        
+        files = service.files().list(
+            q=f"name='latest_backup.json' and parents in '{data_folder}'",
+            fields='files(modifiedTime)'
+        ).execute()
+        
+        last_backup = None
+        if files['files']:
+            last_backup = files['files'][0]['modifiedTime']
+        
+        return jsonify({
+            'connected': True,
+            'last_backup': last_backup
+        })
+        
+    except Exception as e:
+        return jsonify({'connected': False, 'error': str(e)})
 
 # Database initialization
 def create_tables():
