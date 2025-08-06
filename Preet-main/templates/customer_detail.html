@@ -1,158 +1,207 @@
 {% extends "base.html" %}
 
-{% block title %}{{ customer.name }} - Customer Details{% endblock %}
+{% block title %}{{ customer.name }} - Amarjit Electrical Store{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col">
-        <h1 class="text-white mb-0">
-            <i class="fas fa-user me-2"></i>{{ customer.name }}
-        </h1>
-        <p class="text-white-50">Customer details and transaction history</p>
-    </div>
-    <div class="col-auto">
-        <a href="{{ url_for('customers') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Back to Customers
-        </a>
-    </div>
-</div>
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('customers') }}">Customers</a></li>
+        <li class="breadcrumb-item active">{{ customer.name }}</li>
+    </ol>
+</nav>
 
-<!-- Customer Info Card -->
+<!-- Customer Header -->
 <div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-info-circle me-2"></i>Customer Information
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <strong>Name:</strong><br>
-                    {{ customer.name }}
-                </div>
-                <div class="mb-3">
-                    <strong>Phone:</strong><br>
-                    <i class="fas fa-phone me-1"></i>{{ customer.phone }}
-                </div>
-                <div class="mb-3">
-                    <strong>Address:</strong><br>
-                    {{ customer.address or 'No address provided' }}
-                </div>
-                <div class="mb-3">
-                    <strong>Outstanding Debt:</strong><br>
-                    {% if customer.total_debt > 0 %}
-                        <span class="badge bg-danger fs-6">₹{{ "%.2f"|format(customer.total_debt) }}</span>
-                    {% else %}
-                        <span class="badge bg-success fs-6">₹0.00</span>
-                    {% endif %}
-                </div>
-                <div class="mb-3">
-                    <strong>Customer Since:</strong><br>
-                    <small class="text-muted">{{ customer.created_at.strftime('%d %B %Y') }}</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-chart-line me-2"></i>Quick Summary
-                </h5>
-            </div>
             <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <div class="stats-number text-primary">{{ transactions|length }}</div>
-                            <div class="stats-label">Total Purchases</div>
-                        </div>
+                <div class="row">
+                    <div class="col-md-8">
+                        <h2><i class="fas fa-user text-primary"></i> {{ customer.name }}</h2>
+                        <p class="mb-1"><i class="fas fa-phone text-muted"></i> {{ customer.phone }}</p>
+                        <p class="mb-1"><i class="fas fa-map-marker-alt text-muted"></i> {{ customer.address or 'No address provided' }}</p>
+                        <p class="text-muted"><i class="fas fa-calendar text-muted"></i> Customer since {{ customer.created_date.strftime('%d %B %Y') }}</p>
                     </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <div class="stats-number text-success">{{ payments|length }}</div>
-                            <div class="stats-label">Total Payments</div>
-                        </div>
+                    <div class="col-md-4 text-end">
+                        <h3 class="debt-amount {% if customer.total_debt > 0 %}debt-positive{% else %}debt-zero{% endif %}">
+                            ₹{{ "%.2f"|format(customer.total_debt) }}
+                        </h3>
+                        <p class="text-muted">Outstanding Balance</p>
                     </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <div class="stats-number text-info">₹{{ "%.0f"|format(transactions|sum(attribute='amount')) if transactions else 0 }}</div>
-                            <div class="stats-label">Total Purchased</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <div class="stats-number text-warning">₹{{ "%.0f"|format(payments|sum(attribute='amount')) if payments else 0 }}</div>
-                            <div class="stats-label">Total Paid</div>
-                        </div>
-                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6>Quick Actions</h6>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('add_transaction', customer_id=customer.id) }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Record Sale
+                    </a>
+                    <a href="{{ url_for('add_payment', customer_id=customer.id) }}" class="btn btn-warning">
+                        <i class="fas fa-money-bill"></i> Record Payment
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Transactions and Payments -->
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-shopping-cart me-2"></i>Purchase History
-                </h5>
-            </div>
-            <div class="card-body">
+<!-- Transactions and Payments Tabs -->
+<div class="card">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions" type="button" role="tab">
+                    <i class="fas fa-shopping-cart"></i> Transactions ({{ transactions|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab">
+                    <i class="fas fa-money-bill-wave"></i> Payments ({{ payments|length }})
+                </button>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="card-body">
+        <div class="tab-content" id="myTabContent">
+            <!-- Transactions Tab -->
+            <div class="tab-pane fade show active" id="transactions" role="tabpanel">
                 {% if transactions %}
-                    {% for transaction in transactions %}
-                    <div class="d-flex justify-content-between align-items-start py-2 border-bottom">
-                        <div class="flex-grow-1">
-                            <div class="fw-bold text-danger">₹{{ "%.2f"|format(transaction.amount) }}</div>
-                            <small class="text-muted">{{ transaction.description or 'No description' }}</small><br>
-                            <small class="text-muted">{{ transaction.transaction_date.strftime('%d %b %Y at %I:%M %p') }}</small>
-                            {% if transaction.bill_photo_url %}
-                                <br><a href="{{ transaction.bill_photo_url }}" target="_blank" class="btn btn-xs btn-outline-primary mt-1">
-                                    <i class="fas fa-image me-1"></i>View Bill
-                                </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Description</th>
+                                <th>Bill</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.transaction_date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge {% if transaction.transaction_type == 'purchase' %}bg-primary{% else %}bg-warning{% endif %}">
+                                        {{ transaction.transaction_type.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge {% if transaction.transaction_type == 'purchase' %}bg-danger{% else %}bg-success{% endif %}">
+                                        {% if transaction.transaction_type == 'purchase' %}+{% else %}-{% endif %}₹{{ "%.2f"|format(transaction.amount) }}
+                                    </span>
+                                </td>
+                                <td>{{ transaction.description or 'No description' }}</td>
+                                <td>
+                                    {% if transaction.bill_image_url %}
+                                    <a href="{{ transaction.bill_image_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-image"></i> View Bill
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">No bill</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No purchases yet</p>
-                    </div>
+                <div class="text-center py-5">
+                    <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No transactions yet</h5>
+                    <p class="text-muted">Record the first sale or purchase for this customer.</p>
+                    <a href="{{ url_for('add_transaction', customer_id=customer.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add First Transaction
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Payments Tab -->
+            <div class="tab-pane fade" id="payments" role="tabpanel">
+                {% if payments %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Notes</th>
+                                <th>Recorded On</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.payment_date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge bg-success">₹{{ "%.2f"|format(payment.amount) }}</span>
+                                </td>
+                                <td>{{ payment.notes or 'No notes' }}</td>
+                                <td>{{ payment.created_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No payments yet</h5>
+                    <p class="text-muted">Record the first payment from this customer.</p>
+                    <a href="{{ url_for('add_payment', customer_id=customer.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add First Payment
+                    </a>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
-    
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-money-bill-wave me-2"></i>Payment History
-                </h5>
-            </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
             <div class="card-body">
-                {% if payments %}
-                    {% for payment in payments %}
-                    <div class="d-flex justify-content-between align-items-start py-2 border-bottom">
-                        <div class="flex-grow-1">
-                            <div class="fw-bold text-success">₹{{ "%.2f"|format(payment.amount) }}</div>
-                            <small class="text-muted">{{ payment.notes or 'Payment received' }}</small><br>
-                            <small class="text-muted">{{ payment.payment_date.strftime('%d %b %Y at %I:%M %p') }}</small>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No payments yet</p>
-                    </div>
-                {% endif %}
+                <h4 class="text-primary">{{ transactions|length }}</h4>
+                <p class="mb-0">Total Transactions</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-success">{{ payments|length }}</h4>
+                <p class="mb-0">Total Payments</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">
+                    ₹{{ "%.2f"|format(transactions|selectattr('transaction_type', 'equalto', 'purchase')|sum(attribute='amount') or 0) }}
+                </h4>
+                <p class="mb-0">Total Purchases</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-warning">
+                    ₹{{ "%.2f"|format(payments|sum(attribute='amount') or 0) }}
+                </h4>
+                <p class="mb-0">Total Paid</p>
             </div>
         </div>
     </div>
