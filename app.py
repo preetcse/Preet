@@ -572,11 +572,15 @@ def internal_error(error):
 # Database initialization
 def create_tables():
     """Create database tables"""
-    with app.app_context():
-        db.create_all()
+    db.create_all()
 
-# Initialize tables when app starts
-create_tables()
+# Initialize tables when app starts (only in production)
+if not app.debug:
+    with app.app_context():
+        create_tables()
 
 if __name__ == '__main__':
+    # Create tables for development
+    with app.app_context():
+        create_tables()
     app.run(debug=True)
