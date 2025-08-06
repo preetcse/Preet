@@ -13,7 +13,7 @@ from decimal import Decimal
 from functools import wraps
 
 import requests
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, make_response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -683,7 +683,6 @@ def export_customers():
     """Export customers data as CSV"""
     import csv
     from io import StringIO
-    from flask import make_response
     
     output = StringIO()
     writer = csv.writer(output)
@@ -715,7 +714,6 @@ def export_transactions():
     """Export transactions data as CSV"""
     import csv
     from io import StringIO
-    from flask import make_response
     
     output = StringIO()
     writer = csv.writer(output)
